@@ -10,6 +10,10 @@ const io = new Server(server, {
   },
 });
 
+app.get('/health', (req, res) => {
+  res.status(200).send('OK');
+});
+
 io.on('connection', (socket) => {
   console.log('Client connected:', socket.id);
 
