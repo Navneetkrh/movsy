@@ -2,7 +2,7 @@
 
 script.onload = () => {
   chrome.storage.sync.get(['serverUrl'], (result) => {
-    const serverUrl = result.serverUrl || 'https://your-vercel-server-url'; // Replace with your Vercel server URL
+    const serverUrl = result.serverUrl || 'https://movsy-production.up.railway.app/'; // Replace with your Vercel server URL
     socket = io(serverUrl);
 
     console.log('Socket.IO injected');
