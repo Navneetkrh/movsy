@@ -14,6 +14,11 @@ app.get('/health', (req, res) => {
   res.status(200).send('OK');
 });
 
+app.get('/', (req, res) => {
+  // send json response
+  res.json({ message: 'Hello, world!' });
+  
+});
 io.on('connection', (socket) => {
   console.log('Client connected:', socket.id);
 
