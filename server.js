@@ -11,7 +11,7 @@ const io = new Server(server, {
 });
 
 app.get('/health', (req, res) => {
-  res.status(200).send('OK');
+  res.status(200).send('OK bro');
 });
 
 app.get('/', (req, res) => {
@@ -19,6 +19,7 @@ app.get('/', (req, res) => {
   res.json({ message: 'Hello, world!' });
   
 });
+
 io.on('connection', (socket) => {
   console.log('Client connected:', socket.id);
 
