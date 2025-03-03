@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Video Sync Debug Panel</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      margin: 20px;
+      max-width: 800px;
+      margin: 0 auto;
+    }
+    .panel {
+      border: 1px solid #ddd;
+      border-radius: 5px;
+      padding: 15px;
+      margin-bottom: 20px;
+    }
+    .status {
+      padding: 10px;
+      margin: 10px 0;
+      border-radius: 5px;
+      font-weight: bold;
+    }
+    .connected { background-color: #d4edda; color: #155724; }
+    .disconnected { background-color: #f8d7da; color: #721c24; }
+    button {
+      background: #4CAF50;
+      color: white;
+      border: none;
+      padding: 8px 15px;
+      border-radius: 4px;
+      cursor: pointer;
+      margin-right: 5px;
+      margin-bottom: 5px;
+    }
+    button:hover { background: #45a049; }
+    input {
+      padding: 8px;
+      margin-right: 5px;
+      border-radius: 4px;
+      border: 1px solid #ddd;
+    }
+    #log {
+      height: 300px;
+      overflow-y: scroll;
+      background: #f5f5f5;
+      padding: 10px;
+      font-family: monospace;
+      margin-top: 10px;
+      border: 1px solid #ddd;
+    }
+  </style>
+</head>
+<body>
+  <h1>Video Sync Debug Panel</h1>
+  
+  <div class="panel">
+    <h2>Connection Status</h2>
+    <div id="connectionStatus" class="status disconnected">Checking connection...</div>
+    
+    <button id="checkConnection">Check Connection</button>
+    <button id="forceReconnect">Force Reconnect</button>
+    <button id="clearStorage">Clear Storage</button>
+  </div>
+  
+  <div class="panel">
+    <h2>Room Management</h2>
+    <input type="text" id="roomId" placeholder="Room ID">
+    <button id="joinRoom">Join Room</button>
+    <button id="leaveRoom">Leave Room</button>
+    <div id="currentRoom">Current room: None</div>
+  </div>
+  
+  <div class="panel">
+    <h2>Log</h2>
+    <div id="log"></div>
+  </div>
+  
+  <script>
+    // Query connection status
+    function checkConnection() {
+      log('Checking connection status...');
+      
+      chrome.runtime.sendMessage({ type: 'getConnectionStatus' }, response => {
+        const status = document.getElementById('connectionStatus');
+        
+        if (response && response.connected) {
+          status.textContent = 'Connected to server';
+          status.className = 'status connected';
+          log('✅ Connected to server');
+        } else {
+          status.textContent = 'Not connected to server';
+          status.className = 'status disconnected';
+          log('❌ Not connected to server');
+        }
+      });
+    }
+    
+    // Join a room
+    function joinRoom(roomId) {
+      log(`Joining room: ${roomId}`);
+      
+      chrome.runtime.sendMessage({ 
+        type: 'joinRoom',
+        roomId: roomId
+      }, response => {
+        if (response && response.success) {
+          log(`✅ Successfully joined room ${roomId}`);
+          document.getElementById('currentRoom').textContent = `Current room: ${roomId}`;
+        } else {
+          log(`❌ Failed to join room: ${response?.reason || 'unknown error'}`);
+        }
+      });
+    }
+    
+    // Add to log
+    function log(message) {
+      const logDiv = document.getElementById('log');
+      const entry = document.createElement('div');
+      entry.textContent = `[${new Date().toLocaleTimeString()}] ${message}`;
+      logDiv.appendChild(entry);
+      logDiv.scrollTop = logDiv.scrollHeight;
+    }
+    
+    // Initialize
+    document.addEventListener('DOMContentLoaded', () => {
+      // Initial connection check
+      checkConnection();
+      
+      // Set up event handlers
+      document.getElementById('checkConnection').addEventListener('click', checkConnection);
+      
+      document.getElementById('forceReconnect').addEventListener('click', () => {
+        log('Forcing reconnection...');
+        chrome.runtime.sendMessage({ type: 'reconnect' });
+      });
+      
+      document.getElementById('clearStorage').addEventListener('click', () => {
+        log('Clearing storage...');
+        chrome.storage.sync.clear(() => {
+          log('Storage cleared');
+        });
+      });
+      
+      document.getElementById('joinRoom').addEventListener('click', () => {
+        const roomId = document.getElementById('roomId').value.trim();
+        if (roomId) {
+          joinRoom(roomId);
+        } else {
+          log('❌ Please enter a room ID');
+        }
+      });
+      
+      document.getElementById('leaveRoom').addEventListener('click', () => {
+        log('Leaving current room');
+        chrome.runtime.sendMessage({ type: 'leaveRoom' });
+        document.getElementById('currentRoom').textContent = 'Current room: None';
+      });
+      
+      // Check for room in URL
+      const urlParams = new URLSearchParams(window.location.search);
+      const roomFromUrl = urlParams.get('room');
+      if (roomFromUrl) {
+        document.getElementById('roomId').value = roomFromUrl;
+        joinRoom(roomFromUrl);
+      }
+    });
+  </script>
+</body>
+</html>

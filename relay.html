@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Video Sync Relay</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      margin: 20px;
+    }
+    #status {
+      padding: 10px;
+      margin: 10px 0;
+      border-radius: 5px;
+    }
+    .connected {
+      background-color: #d4edda;
+      color: #155724;
+    }
+    .disconnected {
+      background-color: #f8d7da;
+      color: #721c24;
+    }
+    #log {
+      height: 300px;
+      overflow-y: scroll;
+      border: 1px solid #ddd;
+      padding: 10px;
+      margin-top: 10px;
+    }
+  </style>
+</head>
+<body>
+  <h1>Video Sync Relay</h1>
+  <p>This page acts as a relay between your browser extension and the WebSocket server.</p>
+  
+  <div id="status" class="disconnected">Disconnected</div>
+  
+  <h3>Connection Log:</h3>
+  <div id="log"></div>
+  
+  <script>
+    const statusDiv = document.getElementById('status');
+    const logDiv = document.getElementById('log');
+    let ws = null;
+    
+    function log(message, type = 'info') {
+      const line = document.createElement('div');
+      line.textContent = `[${new Date().toLocaleTimeString()}] ${message}`;
+      line.className = type;
+      logDiv.appendChild(line);
+      logDiv.scrollTop = logDiv.scrollHeight;
+    }
+    
+    function connectToServer() {
+      try {
+        ws = new WebSocket('ws://localhost:3000');
+        
+        ws.onopen = () => {
+          statusDiv.textContent = 'Connected to WebSocket server';
+          statusDiv.className = 'connected';
+          log('Connected to WebSocket server', 'success');
+        };
+        
+        ws.onmessage = (event) => {
+          try {
+            const data = JSON.parse(event.data);
+            log(`Received from server: ${JSON.stringify(data)}`, 'info');
+            
+            // Relay to extension through window message
+            window.postMessage({
+              source: 'VIDEO_SYNC_RELAY',
+              data: data
+            }, '*');
+          } catch (e) {
+            log(`Error parsing message: ${e.message}`, 'error');
+          }
+        };
+        
+        ws.onerror = (error) => {
+          log(`WebSocket error: ${error}`, 'error');
+        };
+        
+        ws.onclose = () => {
+          statusDiv.textContent = 'Disconnected from WebSocket server';
+          statusDiv.className = 'disconnected';
+          log('Disconnected from WebSocket server', 'error');
+          
+          // Try to reconnect after a delay
+          setTimeout(connectToServer, 5000);
+        };
+      } catch (e) {
+        log(`Error connecting to server: ${e.message}`, 'error');
+        setTimeout(connectToServer, 5000);
+      }
+    }
+    
+    // Listen for messages from the extension
+    window.addEventListener('message', (event) => {
+      if (event.source === window && event.data.source === 'VIDEO_SYNC_EXTENSION') {
+        log(`Received from extension: ${JSON.stringify(event.data.data)}`, 'info');
+        
+        if (ws && ws.readyState === WebSocket.OPEN) {
+          ws.send(JSON.stringify(event.data.data));
+        } else {
+          log('Cannot forward message: WebSocket not connected', 'error');
+        }
+      }
+    });
+    
+    // Start connection
+    connectToServer();
+    log('Relay started', 'info');
+  </script>
+</body>
+</html>

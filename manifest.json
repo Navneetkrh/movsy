@@ -2,11 +2,14 @@
   "manifest_version": 3,
   "name": "Video Sync",
   "version": "1.0",
-  "description": "Synchronizes video playback across multiple browsers.",
+  "description": "Synchronize video playback across browsers",
   "permissions": [
     "storage",
-    "activeTab",
-    "scripting"
+    "activeTab"
+  ],
+  "host_permissions": [
+    "http://localhost:3000/*",
+    "ws://localhost:3000/*"
   ],
   "background": {
     "service_worker": "background.js"
@@ -17,5 +20,9 @@
       "js": ["content.js"]
     }
   ],
+  "action": {
+    "default_popup": "popup.html",
+    "default_title": "Video Sync"
+  },
   "options_page": "options.html"
 }
