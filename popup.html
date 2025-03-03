@@ -1,61 +1,191 @@
 <!DOCTYPE html>
 <html>
 <head>
+  <title>Video Sync</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            'apple-dark': '#1c1c1e',
+            'apple-darker': '#121214',
+          },
+          boxShadow: {
+            'glow-green': '0 0 5px rgba(52, 211, 153, 0.5)',
+            'glow-red': '0 0 5px rgba(239, 68, 68, 0.5)',
+          }
+        }
+      }
+    }
+  </script>
   <style>
+    :root {
+      --primary-color: #06c;
+      --accent-color: #34c759;
+      --danger-color: #ff3b30;
+      --warning-color: #ffcc00;
+      --text-color: #ffffff;
+      --text-secondary: rgba(255, 255, 255, 0.7);
+      --bg-dark: #1c1c1e;
+      --bg-card: rgba(44, 44, 46, 0.8);
+      --border-color: rgba(255, 255, 255, 0.15);
+      --shadow-color: rgba(0, 0, 0, 0.5);
+      --header-bg: linear-gradient(to right, #34c759, #32d74b);
+    }
+    
     body {
-      width: 300px;
-      font-family: Arial, sans-serif;
-      padding: 10px;
+      width: 320px;
+      font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Helvetica Neue", Arial, sans-serif;
+      background-color: var(--bg-dark);
+      color: var(--text-color);
+      margin: 0;
+      padding: 0;
     }
-    .status {
-      padding: 5px;
-      margin-bottom: 10px;
-      border-radius: 3px;
-    }
-    .connected {
-      background-color: #d4edda;
-      color: #155724;
-    }
-    .disconnected {
-      background-color: #f8d7da;
-      color: #721c24;
-    }
-    button {
-      background: #4CAF50;
-      border: none;
-      color: white;
-      padding: 8px;
+    
+    .header {
+      background: var(--header-bg);
+      padding: 16px;
       text-align: center;
-      text-decoration: none;
-      font-size: 14px;
-      cursor: pointer;
-      width: 100%;
-      margin-top: 10px;
-      border-radius: 3px;
+      font-size: 16px;
+      font-weight: 600;
     }
+    
+    .content {
+      padding: 16px;
+    }
+    
+    .status {
+      display: flex;
+      align-items: center;
+      padding: 12px;
+      margin-bottom: 16px;
+      border-radius: 10px;
+      background: var(--bg-card);
+      border-left: 4px solid;
+    }
+    
+    .status.connected {
+      border-color: var(--accent-color);
+    }
+    
+    .status.disconnected {
+      border-color: var(--danger-color);
+    }
+    
+    .status-indicator {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      margin-right: 10px;
+    }
+    
+    .status-indicator.connected {
+      background-color: var(--accent-color);
+      box-shadow: 0 0 5px var(--accent-color);
+    }
+    
+    .status-indicator.disconnected {
+      background-color: var(--danger-color);
+      box-shadow: 0 0 5px var(--danger-color);
+    }
+    
+    .form-group {
+      margin-bottom: 16px;
+    }
+    
+    label {
+      display: block;
+      font-size: 12px;
+      color: var(--text-secondary);
+      margin-bottom: 6px;
+    }
+    
     input {
       width: 100%;
-      padding: 8px;
+      padding: 8px 10px;
+      font-size: 13px;
+      background: rgba(60, 60, 67, 0.25);
+      border: 1px solid var(--border-color);
+      border-radius: 8px;
+      color: var(--text-color);
       box-sizing: border-box;
-      margin: 5px 0;
+      font-family: inherit;
+    }
+    
+    button {
+      width: 100%;
+      padding: 10px;
+      border: none;
+      border-radius: 8px;
+      margin: 8px 0;
+      font-size: 14px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: background-color 0.2s;
+      font-family: inherit;
+    }
+    
+    .btn-primary {
+      background-color: var(--accent-color);
+      color: white;
+    }
+    
+    .btn-primary:hover {
+      background-color: #28bd4c;
+    }
+    
+    .btn-secondary {
+      background-color: var(--primary-color);
+      color: white;
+    }
+    
+    .btn-secondary:hover {
+      background-color: #0055b3;
+    }
+    
+    .btn-neutral {
+      background-color: rgba(120, 120, 128, 0.3);
+      color: var(--text-color);
+    }
+    
+    .btn-neutral:hover {
+      background-color: rgba(120, 120, 128, 0.4);
+    }
+    
+    .footer {
+      padding: 12px;
+      text-align: center;
+      font-size: 11px;
+      color: var(--text-secondary);
+      border-top: 1px solid var(--border-color);
     }
   </style>
 </head>
 <body>
-  <h2>Video Sync</h2>
-  
-  <div id="connectionStatus" class="status disconnected">
-    Checking connection...
+  <div class="header">
+    <span>✨ Video Sync</span>
   </div>
   
-  <div>
-    <label for="roomId">Current Room:</label>
-    <input type="text" id="roomId" readonly>
+  <div class="content">
+    <div id="connectionStatus" class="status disconnected">
+      <div class="status-indicator disconnected"></div>
+      <span>Checking connection...</span>
+    </div>
+    
+    <div class="form-group">
+      <label for="roomId">Current Room:</label>
+      <input type="text" id="roomId" readonly>
+    </div>
+    
+    <button id="copyLink" class="btn-primary">Copy Sync Link</button>
+    <button id="createRoom" class="btn-secondary">Create New Room</button>
+    <button id="options" class="btn-neutral">Options</button>
   </div>
   
-  <button id="copyLink">Copy Sync Link</button>
-  <button id="createRoom">Create New Room</button>
-  <button id="options">Options</button>
+  <div class="footer">
+    Made by Navneet
+  </div>
   
   <script src="popup.js"></script>
 </body>

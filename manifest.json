@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
-  "name": "Video Sync",
-  "version": "1.0",
-  "description": "Synchronize video playback across browsers",
+  "name": "Video Sync by Navneet",
+  "version": "1.0.0",
+  "description": "Synchronize video playback across browsers with chat support",
   "permissions": [
     "storage",
     "activeTab"
@@ -17,12 +17,14 @@
   "content_scripts": [
     {
       "matches": ["<all_urls>"],
-      "js": ["content.js"]
+      "js": ["config.js", "notifications.js", "chat-handler.js", "content.js"],
+      "css": ["apple-ui.css"]
     }
   ],
   "action": {
     "default_popup": "popup.html",
-    "default_title": "Video Sync"
+    "default_title": "Movsy"
   },
-  "options_page": "options.html"
+  "options_page": "options.html",
+  "author": "Navneet"
 }

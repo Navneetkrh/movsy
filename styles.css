@@ -1,0 +1,208 @@
+:root {
+  --primary-color: #4CAF50;
+  --primary-dark: #388E3C;
+  --accent-color: #FF5722;
+  --accent-dark: #E64A19;
+  --blue-color: #2196F3;
+  --blue-dark: #0b7dda;
+  --dark-bg: #212121;
+  --dark-surface: #333333;
+  --dark-border: #444444;
+  --light-text: #ffffff;
+  --muted-text: #cccccc;
+}
+
+/* Video Sync Panel Styles */
+#video-sync-container {
+  position: fixed;
+  bottom: 20px;
+  right: 20px;
+  width: 300px;
+  background: rgba(33, 33, 33, 0.9);
+  color: white;
+  border-radius: 8px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  z-index: 9999;
+  overflow: hidden;
+  transition: height 0.3s ease, width 0.3s ease;
+}
+
+.vs-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: var(--primary-color);
+  padding: 10px 15px;
+  cursor: move;
+}
+
+.vs-header h3 {
+  margin: 0;
+  font-size: 16px;
+  font-weight: bold;
+}
+
+.vs-connection-indicator {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  margin-right: 8px;
+}
+
+.vs-connection-indicator.connected {
+  background-color: var(--primary-color);
+}
+
+.vs-connection-indicator.disconnected {
+  background-color: #F44336;
+}
+
+.vs-content {
+  padding: 10px 15px;
+}
+
+.vs-room-info {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 10px;
+}
+
+.vs-room-label {
+  font-weight: bold;
+  font-size: 14px;
+}
+
+.vs-share-btn {
+  background: var(--blue-color);
+  border: none;
+  color: white;
+  padding: 6px 12px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 12px;
+  transition: background 0.2s;
+}
+
+.vs-share-btn:hover {
+  background: var(--blue-dark);
+}
+
+.vs-username-container {
+  margin-bottom: 10px;
+}
+
+.vs-username-label {
+  font-size: 12px;
+  margin-bottom: 4px;
+}
+
+.vs-username-input {
+  width: 100%;
+  padding: 6px;
+  border-radius: 4px;
+  border: 1px solid var(--dark-border);
+  background: var(--dark-surface);
+  color: white;
+  box-sizing: border-box;
+  font-size: 12px;
+}
+
+.vs-chat-toggle {
+  background: var(--accent-color);
+  border: none;
+  color: white;
+  padding: 8px 15px;
+  border-radius: 4px;
+  cursor: pointer;
+  width: 100%;
+  margin-bottom: 10px;
+  font-weight: bold;
+  transition: background 0.2s;
+}
+
+.vs-chat-toggle:hover {
+  background: var(--accent-dark);
+}
+
+.vs-chat-panel {
+  display: none;
+  height: 200px;
+  flex-direction: column;
+  margin-bottom: 10px;
+}
+
+.vs-chat-messages {
+  height: 160px;
+  overflow-y: auto;
+  background: #222;
+  border-radius: 4px;
+  padding: 8px;
+  margin-bottom: 8px;
+  font-size: 13px;
+}
+
+.vs-chat-form {
+  display: flex;
+  gap: 5px;
+}
+
+.vs-chat-input {
+  flex-grow: 1;
+  padding: 6px;
+  border-radius: 4px;
+  border: 1px solid var(--dark-border);
+  background: var(--dark-surface);
+  color: white;
+}
+
+.vs-chat-send {
+  background: var(--blue-color);
+  border: none;
+  color: white;
+  padding: 6px 12px;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.vs-footer {
+  padding: 5px;
+  text-align: center;
+  font-size: 10px;
+  color: #aaa;
+  border-top: 1px solid var(--dark-border);
+}
+
+/* Chat message styles */
+.vs-message {
+  margin-bottom: 5px;
+  word-break: break-word;
+}
+
+.vs-message.system {
+  color: #FFC107;
+  font-style: italic;
+}
+
+.vs-sender {
+  font-weight: bold;
+}
+
+.vs-sender.user {
+  color: var(--primary-color);
+}
+
+.vs-sender.system {
+  color: #FFC107;
+}
+
+/* Button styles */
+.vs-toggle-btn {
+  background: none;
+  border: none;
+  color: white;
+  font-size: 16px;
+  cursor: pointer;
+  padding: 0 5px;
+}

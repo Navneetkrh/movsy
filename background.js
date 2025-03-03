@@ -63,6 +63,27 @@ function connectToServer(url = SERVER_URL) {
             });
           });
         }
+        
+        // Handle chat messages
+        if (data.type === 'chatMessage') {
+          chrome.tabs.query({active: true}, tabs => {
+            tabs.forEach(tab => {
+              chrome.tabs.sendMessage(tab.id, data).catch(() => {});
+            });
+          });
+        }
+        
+        // Handle chat history
+        if (data.type === 'chatHistory') {
+          chrome.tabs.query({active: true}, tabs => {
+            tabs.forEach(tab => {
+              chrome.tabs.sendMessage(tab.id, {
+                type: 'chatHistory',
+                messages: data.messages
+              }).catch(() => {});
+            });
+          });
+        }
       } catch (err) {
         console.error('Error parsing message:', err);
       }
@@ -165,6 +186,35 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     } else {
       sendResponse({ success: false, reason: 'not_connected' });
     }
+  }
+  
+  // Add handlers for chat messages
+  if (message.type === 'sendChatMessage') {
+    console.log('💬 Sending chat message to room:', message.roomId);
+    if (ws && ws.readyState === WebSocket.OPEN) {
+      sendToServer({
+        type: 'chatMessage',
+        roomId: message.roomId,
+        username: message.username,
+        text: message.text
+      });
+      sendResponse({ success: true });
+    } else {
+      sendResponse({ success: false, reason: 'not_connected' });
+    }
+    return true;
+  }
+  
+  if (message.type === 'updateUsername') {
+    console.log('👤 Updating username to:', message.username);
+    if (ws && ws.readyState === WebSocket.OPEN) {
+      sendToServer({
+        type: 'updateUsername',
+        username: message.username,
+        roomId: message.roomId
+      });
+    }
+    return true;
   }
   
   return true; // Keep the message channel open for async response

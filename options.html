@@ -3,76 +3,172 @@
 <head>
   <title>Video Sync Options</title>
   <style>
+    :root {
+      --primary-color: #06c;
+      --accent-color: #34c759;
+      --danger-color: #ff3b30;
+      --warning-color: #ffcc00;
+      --text-color: #ffffff;
+      --text-secondary: rgba(255, 255, 255, 0.7);
+      --bg-dark: #1c1c1e;
+      --bg-card: rgba(44, 44, 46, 0.8);
+      --border-color: rgba(255, 255, 255, 0.15);
+      --shadow-color: rgba(0, 0, 0, 0.5);
+    }
+    
     body {
-      font-family: Arial, sans-serif;
+      font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Helvetica Neue", Arial, sans-serif;
+      background-color: var(--bg-dark);
+      color: var(--text-color);
       margin: 0;
       padding: 20px;
-      max-width: 800px;
+    }
+    
+    .container {
+      max-width: 700px;
       margin: 0 auto;
     }
+    
+    header {
+      text-align: center;
+      margin-bottom: 30px;
+    }
+    
     h1 {
-      color: #333;
+      font-size: 24px;
+      font-weight: 600;
+      color: var(--accent-color);
     }
-    .option-group {
+    
+    .card {
+      background-color: var(--bg-card);
+      border-radius: 12px;
+      border: 1px solid var(--border-color);
+      padding: 20px;
       margin-bottom: 20px;
-      padding: 15px;
-      border: 1px solid #ddd;
-      border-radius: 5px;
+      box-shadow: 0 4px 12px var(--shadow-color);
     }
+    
+    h2 {
+      font-size: 18px;
+      font-weight: 600;
+      color: var(--accent-color);
+      margin-top: 0;
+      margin-bottom: 16px;
+    }
+    
     label {
       display: block;
-      margin-bottom: 5px;
-      font-weight: bold;
+      font-size: 14px;
+      margin-bottom: 6px;
+      color: var(--text-secondary);
     }
+    
     input {
       width: 100%;
-      padding: 8px;
-      margin-bottom: 10px;
-      box-sizing: border-box;
-    }
-    button {
-      background: #4CAF50;
-      border: none;
-      color: white;
-      padding: 10px 15px;
-      text-align: center;
-      cursor: pointer;
-      border-radius: 3px;
-    }
-    .status {
-      margin-top: 10px;
       padding: 10px;
-      border-radius: 3px;
+      border-radius: 8px;
+      border: 1px solid var(--border-color);
+      background-color: rgba(60, 60, 67, 0.25);
+      color: var(--text-color);
+      font-family: inherit;
+      box-sizing: border-box;
+      margin-bottom: 12px;
     }
-    .success {
-      background-color: #d4edda;
-      color: #155724;
+    
+    .button-group {
+      display: flex;
+      gap: 10px;
+      margin-top: 16px;
     }
-    .error {
-      background-color: #f8d7da;
-      color: #721c24;
+    
+    button {
+      padding: 10px 16px;
+      border-radius: 8px;
+      border: none;
+      font-weight: 500;
+      font-family: inherit;
+      font-size: 14px;
+      cursor: pointer;
+      transition: background-color 0.2s;
+    }
+    
+    .btn-primary {
+      background-color: var(--primary-color);
+      color: white;
+    }
+    
+    .btn-primary:hover {
+      background-color: #0055b3;
+    }
+    
+    .btn-success {
+      background-color: var(--accent-color);
+      color: white;
+    }
+    
+    .btn-success:hover {
+      background-color: #28bd4c;
+    }
+    
+    .status {
+      padding: 12px;
+      border-radius: 8px;
+      margin-top: 16px;
+      display: none;
+    }
+    
+    .status.success {
+      background-color: rgba(52, 199, 89, 0.2);
+      border: 1px solid var(--accent-color);
+      color: var(--accent-color);
+    }
+    
+    .status.error {
+      background-color: rgba(255, 59, 48, 0.2);
+      border: 1px solid var(--danger-color);
+      color: var(--danger-color);
+    }
+    
+    footer {
+      text-align: center;
+      color: var(--text-secondary);
+      font-size: 12px;
+      margin-top: 30px;
     }
   </style>
 </head>
 <body>
-  <h1>Video Sync Options</h1>
-  
-  <div class="option-group">
-    <h2>Server Settings</h2>
-    <label for="serverUrl">Sync Server URL:</label>
-    <input type="text" id="serverUrl" placeholder="ws://localhost:3000">
-    <p>Default: ws://localhost:3000</p>
+  <div class="container">
+    <header>
+      <h1>Video Sync Options</h1>
+    </header>
     
-    <button id="testConnection">Test Connection</button>
-    <button id="saveSettings">Save Settings</button>
+    <div class="card">
+      <h2>Server Settings</h2>
+      
+      <label for="serverUrl">Sync Server URL:</label>
+      <input type="text" id="serverUrl" placeholder="ws://localhost:3000">
+      
+      <p style="color: var(--text-secondary); font-size: 14px;">Default: ws://localhost:3000</p>
+      
+      <div class="button-group">
+        <button id="testConnection" class="btn-primary">Test Connection</button>
+        <button id="saveSettings" class="btn-success">Save Settings</button>
+      </div>
+      
+      <div id="connectionStatus" class="status"></div>
+    </div>
     
-    <div id="connectionStatus" class="status" style="display: none;"></div>
-  </div>
-  
-  <div class="option-group">
-    <h2>About</h2>
-    <p>Video Sync allows you to watch videos in sync with friends.</p>
-    <p>Version: 1.0</p>
+    <div class="card">
+      <h2>About</h2>
+      <p style="color: var(--text-secondary);">Video Sync allows you to watch videos in sync with friends.</p>
+      <p style="color: var(--text-secondary); font-size: 14px;">Version: 1.0</p>
+    </div>
+    
+    <footer>
+      <p>Made with ❤️ by Navneet</p>
+    </footer>
   </div>
   
   <script src="options.js"></script>

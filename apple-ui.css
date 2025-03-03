@@ -1,0 +1,333 @@
+/* Apple-inspired UI design system */
+
+/* Base styles */
+:root {
+  --primary-color: #06c;
+  --accent-color: #34c759;
+  --danger-color: #ff3b30;
+  --warning-color: #ffcc00;
+  --text-color: #ffffff;
+  --text-secondary: rgba(255, 255, 255, 0.7);
+  --bg-dark: #1c1c1e;
+  --bg-card: rgba(44, 44, 46, 0.8);
+  --border-color: rgba(255, 255, 255, 0.15);
+  --shadow-color: rgba(0, 0, 0, 0.5);
+  --header-bg: linear-gradient(to right, #34c759, #32d74b);
+  --frosted-bg: rgba(28, 28, 30, 0.8);
+  
+  --font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Helvetica Neue", Arial, sans-serif;
+}
+
+/* Main container */
+.vs-container {
+  position: fixed;
+  bottom: 20px;
+  right: 20px;
+  width: 300px;
+  background: var(--frosted-bg);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  color: var(--text-color);
+  border-radius: 12px;
+  box-shadow: 0 6px 20px var(--shadow-color);
+  font-family: var(--font-family);
+  z-index: 9999;
+  overflow: hidden;
+  border: 1px solid var(--border-color);
+  opacity: 0.95;
+  transition: all 0.3s ease;
+}
+
+/* Header */
+.vs-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: var(--header-bg);
+  padding: 12px 16px;
+  cursor: move;
+}
+
+.vs-header h3 {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 600;
+}
+
+.vs-header-left {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+/* Connection indicator */
+.vs-indicator {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+}
+
+.vs-indicator.connected {
+  background-color: var(--accent-color);
+  box-shadow: 0 0 5px var(--accent-color);
+}
+
+.vs-indicator.disconnected {
+  background-color: var(--danger-color);
+  box-shadow: 0 0 5px var(--danger-color);
+}
+
+/* Button styles */
+.vs-btn {
+  border: none;
+  border-radius: 8px;
+  padding: 8px 12px;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  font-family: var(--font-family);
+  text-align: center;
+}
+
+.vs-btn-primary {
+  background-color: var(--primary-color);
+  color: white;
+}
+
+.vs-btn-primary:hover {
+  background-color: #0055b3;
+}
+
+.vs-btn-success {
+  background-color: var(--accent-color);
+  color: white;
+}
+
+.vs-btn-success:hover {
+  background-color: #28bd4c;
+}
+
+.vs-btn-danger {
+  background-color: var(--danger-color);
+  color: white;
+}
+
+.vs-btn-danger:hover {
+  background-color: #e0302a;
+}
+
+.vs-btn-ghost {
+  background-color: transparent;
+  color: var(--text-color);
+  padding: 4px;
+}
+
+.vs-btn-ghost:hover {
+  background-color: rgba(255, 255, 255, 0.1);
+}
+
+.vs-btn-block {
+  display: block;
+  width: 100%;
+  margin-bottom: 10px;
+}
+
+/* Content area */
+.vs-content {
+  padding: 16px;
+}
+
+/* Room info */
+.vs-room-info {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 16px;
+}
+
+.vs-room-label {
+  font-weight: 500;
+  font-size: 14px;
+}
+
+/* Form elements */
+.vs-form-group {
+  margin-bottom: 14px;
+}
+
+.vs-label {
+  display: block;
+  font-size: 12px;
+  color: var(--text-secondary);
+  margin-bottom: 6px;
+}
+
+.vs-input {
+  width: 100%;
+  padding: 8px 10px;
+  font-size: 13px;
+  background: rgba(60, 60, 67, 0.25);
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  color: var(--text-color);
+  box-sizing: border-box;
+  font-family: var(--font-family);
+}
+
+.vs-input:focus {
+  outline: none;
+  border-color: var(--primary-color);
+  box-shadow: 0 0 0 2px rgba(0, 122, 255, 0.25);
+}
+
+/* Chat section */
+.vs-chat-container {
+  display: none;
+  flex-direction: column;
+  height: 200px;
+  margin-bottom: 12px;
+}
+
+.vs-chat-messages {
+  flex-grow: 1;
+  overflow-y: auto;
+  background: rgba(0, 0, 0, 0.2);
+  border-radius: 8px;
+  padding: 10px;
+  margin-bottom: 10px;
+  font-size: 13px;
+  max-height: 150px;
+}
+
+.vs-chat-form {
+  display: flex;
+  gap: 8px;
+}
+
+.vs-chat-input {
+  flex-grow: 1;
+}
+
+/* Message styles */
+.vs-message {
+  margin-bottom: 8px;
+  word-break: break-word;
+  line-height: 1.4;
+}
+
+.vs-message.system {
+  color: var(--warning-color);
+  font-style: italic;
+}
+
+.vs-sender {
+  font-weight: 600;
+}
+
+.vs-sender.user {
+  color: var(--accent-color);
+}
+
+.vs-sender.system {
+  color: var(--warning-color);
+}
+
+/* Footer */
+.vs-footer {
+  padding: 8px;
+  text-align: center;
+  font-size: 10px;
+  color: var(--text-secondary);
+  border-top: 1px solid var(--border-color);
+}
+
+/* Animations */
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.vs-container {
+  animation: fadeIn 0.3s ease-out;
+}
+
+/* Notification system */
+.vs-notifications-container {
+  position: fixed;
+  top: 20px;
+  right: 20px;
+  z-index: 10000;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 10px;
+}
+
+.vs-notification {
+  padding: 12px 16px;
+  border-radius: 10px;
+  background-color: var(--bg-card);
+  color: var(--text-color);
+  box-shadow: 0 3px 10px var(--shadow-color);
+  font-family: var(--font-family);
+  font-size: 14px;
+  max-width: 300px;
+  position: relative;
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  border: 1px solid var(--border-color);
+  animation: slideIn 0.3s ease-out;
+}
+
+.vs-notification.info {
+  border-left: 4px solid var(--primary-color);
+}
+
+.vs-notification.success {
+  border-left: 4px solid var(--accent-color);
+}
+
+.vs-notification.warning {
+  border-left: 4px solid var(--warning-color);
+}
+
+.vs-notification.error {
+  border-left: 4px solid var(--danger-color);
+}
+
+.vs-notification-close {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  font-size: 16px;
+  color: var(--text-secondary);
+  cursor: pointer;
+  background: transparent;
+  border: none;
+  padding: 0;
+  width: 20px;
+  height: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 10px;
+}
+
+.vs-notification-close:hover {
+  background-color: rgba(255, 255, 255, 0.1);
+}
+
+@keyframes slideIn {
+  from { opacity: 0; transform: translateX(100%); }
+  to { opacity: 1; transform: translateX(0); }
+}
+
+@keyframes slideOut {
+  from { opacity: 1; transform: translateX(0); }
+  to { opacity: 0; transform: translateX(100%); }
+}
+
+.vs-sliding-out {
+  animation: slideOut 0.3s ease-out forwards;
+}

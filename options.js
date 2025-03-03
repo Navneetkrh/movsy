@@ -2,11 +2,11 @@ import config from './config.js';
 
 document.addEventListener('DOMContentLoaded', () => {
   const serverUrlInput = document.getElementById('serverUrl');
-  const testButton = document.getElementById('testConnection');
-  const saveButton = document.getElementById('saveSettings');
+  const testConnectionBtn = document.getElementById('testConnection');
+  const saveSettingsBtn = document.getElementById('saveSettings');
   const statusDiv = document.getElementById('connectionStatus');
   
-  // Load saved settings
+  // Load saved server URL
   chrome.storage.sync.get(['serverUrl'], (result) => {
     if (result.serverUrl) {
       serverUrlInput.value = result.serverUrl;
@@ -16,48 +16,71 @@ document.addEventListener('DOMContentLoaded', () => {
   });
   
   // Test connection button
-  testButton.addEventListener('click', () => {
-    const serverUrl = serverUrlInput.value;
-    statusDiv.style.display = 'block';
-    statusDiv.textContent = 'Testing connection...';
-    statusDiv.className = 'status';
+  testConnectionBtn.addEventListener('click', () => {
+    const serverUrl = serverUrlInput.value.trim();
     
-    // Convert ws:// to http:// for health check
-    const httpUrl = serverUrl.replace(/^ws/, 'http');
+    if (!serverUrl.startsWith('ws://') && !serverUrl.startsWith('wss://')) {
+      showStatus('Error: URL must start with ws:// or wss://', 'error');
+      return;
+    }
     
-    fetch(`${httpUrl}/health`)
+    showStatus('Testing connection...', '');
+    
+    const testUrl = serverUrl.replace(/^ws/, 'http');
+    
+    fetch(`${testUrl}/health`, { timeout: 5000 })
       .then(response => {
-        if (!response.ok) {
-          throw new Error(`Server returned ${response.status}`);
-        }
+        if (!response.ok) throw new Error(`Server returned ${response.status}`);
         return response.json();
       })
       .then(data => {
-        statusDiv.textContent = `Connection successful! Server has ${data.rooms || 0} active rooms.`;
-        statusDiv.className = 'status success';
+        showStatus(`Success! Server has ${data.rooms || 0} active rooms and ${data.connections || 0} connections.`, 'success');
       })
-      .catch(err => {
-        statusDiv.textContent = `Connection failed: ${err.message}`;
-        statusDiv.className = 'status error';
+      .catch(error => {
+        showStatus(`Failed to connect: ${error.message}`, 'error');
+        
+        // Try WebSocket direct test if HTTP test fails
+        try {
+          const ws = new WebSocket(serverUrl);
+          
+          ws.onopen = () => {
+            showStatus(`WebSocket connection successful!`, 'success');
+            ws.close();
+          };
+          
+          ws.onerror = () => {
+            showStatus(`WebSocket connection failed.`, 'error');
+          };
+        } catch (wsError) {
+          console.error('WebSocket test error:', wsError);
+        }
       });
   });
   
-  // Save settings button
-  saveButton.addEventListener('click', () => {
-    const serverUrl = serverUrlInput.value;
+  // Save settings
+  saveSettingsBtn.addEventListener('click', () => {
+    const serverUrl = serverUrlInput.value.trim();
+    
+    if (!serverUrl.startsWith('ws://') && !serverUrl.startsWith('wss://')) {
+      showStatus('Error: URL must start with ws:// or wss://', 'error');
+      return;
+    }
     
     chrome.storage.sync.set({ serverUrl }, () => {
-      statusDiv.textContent = 'Settings saved!';
-      statusDiv.className = 'status success';
-      statusDiv.style.display = 'block';
+      showStatus('Settings saved successfully!', 'success');
       
       // Notify background script to reconnect
-      chrome.runtime.sendMessage({ type: 'reconnect', serverUrl });
-      
-      // Hide message after 3 seconds
-      setTimeout(() => {
-        statusDiv.style.display = 'none';
-      }, 3000);
+      chrome.runtime.sendMessage({ 
+        type: 'reconnect',
+        serverUrl: serverUrl
+      });
     });
   });
+  
+  // Helper to show status
+  function showStatus(message, type) {
+    statusDiv.textContent = message;
+    statusDiv.className = `status ${type}`;
+    statusDiv.style.display = 'block';
+  }
 });
