@@ -1,0 +1,18 @@
+<svg width="128" height="128" viewBox="0 0 128 128" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <!-- Light Purple to Peach Gradient Background -->
+  <circle cx="64" cy="64" r="64" fill="url(#paint0_linear)"/>
+  
+  <!-- Play Button Triangle -->
+  <path d="M50 40L90 64L50 88V40Z" fill="white"/>
+  
+  <!-- Sync Icon -->
+  <path d="M95 78C95 92.4 83.4 104 69 104C54.6 104 43 92.4 43 78C43 63.6 54.6 52 69 52V64L89 44L69 24V36C49.1 36 33 52.1 33 72C33 91.9 49.1 108 69 108C88.9 108 105 91.9 105 72H95V78Z" fill="white" fill-opacity="0.7"/>
+  
+  <!-- Gradient Definition -->
+  <defs>
+    <linearGradient id="paint0_linear" x1="0" y1="0" x2="128" y2="128" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#C4B5FD"/>
+      <stop offset="1" stop-color="#FFCBA4"/>
+    </linearGradient>
+  </defs>
+</svg>

@@ -1,0 +1,609 @@
+/* Enhanced Theme with Light/Dark Mode Support */
+
+/* Base Variables - Light Theme */
+:root {
+  /* Purple-Peach-Beige Theme */
+  --vs-primary-light: #a78bfa;
+  --vs-secondary-light: #ffcba4;
+  --vs-text-light: #4b3f72;
+  --vs-background-light: var(--light-beige);
+  --vs-card-light: rgba(245, 245, 220, 0.7);
+  --vs-border-light: rgba(167, 139, 250, 0.2);
+  --vs-gradient-light: linear-gradient(135deg, #c4b5fd 0%, #ffcba4 100%);
+
+  /* Dark Theme */
+  --vs-primary-dark: #8b5cf6;
+  --vs-secondary-dark: #ff8c66;
+  --vs-text-dark: #f3f4f6;
+  --vs-background-dark: rgba(30, 30, 46, 0.85);
+  --vs-card-dark: rgba(41, 41, 61, 0.7);
+  --vs-border-dark: rgba(80, 80, 120, 0.2);
+  --vs-gradient-dark: linear-gradient(135deg, #4c1d95 0%, #7c2d12 100%);
+  
+  /* Shared */
+  --vs-danger: #ef4444;
+  --vs-success: #10b981;
+  --vs-warning: #f59e0b;
+  --vs-info: #3b82f6;
+  
+  /* Sizing and Spacing */
+  --vs-border-radius: 16px;
+  --vs-border-radius-sm: 8px;
+  --vs-spacing-xs: 4px;
+  --vs-spacing-sm: 8px;
+  --vs-spacing-md: 16px;
+  --vs-spacing-lg: 24px;
+  
+  /* Default to light theme */
+  --vs-primary: var(--vs-primary-light);
+  --vs-secondary: var(--vs-secondary-light);
+  --vs-text: var(--vs-text-light);
+  --vs-background: var(--vs-background-light);
+  --vs-card: var(--vs-card-light);
+  --vs-border: var(--vs-border-light);
+  --vs-gradient: var(--vs-gradient-light);
+}
+
+/* Dark Mode */
+.vs-overlay.vs-dark-mode {
+  --vs-primary: var(--vs-primary-dark);
+  --vs-secondary: var(--vs-secondary-dark);
+  --vs-text: var(--vs-text-dark);
+  --vs-background: var(--vs-background-dark);
+  --vs-card: var(--vs-card-dark);
+  --vs-border: var(--vs-border-dark);
+  --vs-gradient: var(--vs-gradient-dark);
+}
+
+/* Main Overlay */
+.vs-overlay {
+  position: fixed;
+  top: 20px;
+  right: 20px;
+  width: 350px;
+  background: var(--vs-background);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border-radius: var(--vs-border-radius);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+  z-index: 9999;
+  border: 1px solid var(--vs-border);
+  color: var(--vs-text);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  transition: all 0.3s cubic-bezier(0.25, 1, 0.5, 1);
+}
+
+/* Dragging state */
+.vs-overlay.vs-dragging {
+  opacity: 0.8;
+  transform: scale(0.98);
+  transition: all 0.1s ease-out;
+}
+
+/* Collapsed state */
+.vs-overlay.vs-collapsed {
+  height: 60px !important;
+  overflow: hidden;
+}
+
+.vs-overlay.vs-collapsed .vs-content,
+.vs-overlay.vs-collapsed .vs-footer {
+  display: none;
+}
+
+/* Header */
+.vs-header {
+  padding: 16px;
+  background: var(--vs-gradient);
+  color: white;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  cursor: move;
+  user-select: none;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.vs-header-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 600;
+  font-size: 16px;
+}
+
+.vs-header-controls {
+  display: flex;
+  gap: 4px;
+}
+
+.vs-btn-icon {
+  width: 24px;
+  height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(255, 255, 255, 0.2);
+  border: none;
+  border-radius: 50%;
+  color: white;
+  cursor: pointer;
+  transition: all 0.2s;
+  font-size: 12px;
+}
+
+.vs-btn-icon:hover {
+  background: rgba(255, 255, 255, 0.4);
+  transform: translateY(-1px);
+}
+
+/* Content */
+.vs-content {
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  overflow: hidden;
+}
+
+/* Status */
+.vs-status {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 16px;
+  padding: 12px;
+  border-radius: var(--vs-border-radius-sm);
+  background: var(--vs-card);
+  font-size: 13px;
+}
+
+.vs-status-indicator {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+}
+
+.vs-status-indicator.connected {
+  background: var(--vs-success);
+  box-shadow: 0 0 5px var(--vs-success);
+}
+
+.vs-status-indicator.disconnected {
+  background: var(--vs-danger);
+  box-shadow: 0 0 5px var(--vs-danger);
+}
+
+/* Room info */
+.vs-room-info {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px;
+  background: var(--vs-card);
+  border-radius: var(--vs-border-radius-sm);
+  margin-bottom: 16px;
+  border: 1px solid var(--vs-border);
+}
+
+.vs-room-id {
+  font-weight: 600;
+  color: var(--vs-primary);
+  max-width: 200px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.vs-member-count {
+  background: var(--vs-primary);
+  color: white;
+  padding: 4px 8px;
+  border-radius: 12px;
+  font-size: 12px;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+/* Tabs */
+.vs-tabs {
+  display: flex;
+  margin-bottom: 16px;
+  border-radius: var(--vs-border-radius-sm);
+  overflow: hidden;
+  background: var(--vs-card);
+  border: 1px solid var(--vs-border);
+}
+
+.vs-tab {
+  flex: 1;
+  padding: 10px;
+  text-align: center;
+  cursor: pointer;
+  transition: all 0.2s;
+  font-size: 14px;
+  color: var(--vs-text);
+  position: relative;
+  font-weight: 500;
+  opacity: 0.7;
+}
+
+.vs-tab.active {
+  background: var(--vs-card);
+  color: var(--vs-primary);
+  opacity: 1;
+  box-shadow: inset 0 -3px 0 var(--vs-primary);
+}
+
+.vs-tab-content {
+  display: none;
+  flex-direction: column;
+  flex: 1;
+  overflow: hidden;
+}
+
+.vs-tab-content.active {
+  display: flex;
+}
+
+/* User Profile */
+.vs-user-profile {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 16px;
+  padding: 8px;
+  background: var(--vs-card);
+  border-radius: var(--vs-border-radius-sm);
+  border: 1px solid var(--vs-border);
+}
+
+.vs-avatar {
+  width: 32px;
+  height: 32px;
+  background: var(--vs-gradient);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  font-weight: bold;
+  font-size: 16px;
+}
+
+.vs-username-input {
+  flex: 1;
+  padding: 8px;
+  border: 1px solid var(--vs-border);
+  border-radius: var(--vs-border-radius-sm);
+  font-size: 14px;
+  background: var(--vs-background);
+  color: var(--vs-text);
+}
+
+.vs-username-input:focus {
+  outline: none;
+  border-color: var(--vs-primary);
+  box-shadow: 0 0 0 2px rgba(139, 92, 246, 0.2);
+}
+
+/* Chat Container */
+.vs-chat-container {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  overflow: hidden;
+}
+
+.vs-chat-messages {
+  flex: 1;
+  padding: 8px;
+  overflow-y: auto;
+  background: var(--vs-card);
+  border-radius: var(--vs-border-radius-sm);
+  margin-bottom: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-height: 200px;
+  max-height: 300px;
+  border: 1px solid var(--vs-border);
+}
+
+/* Message styles */
+.vs-message {
+  padding: 8px 12px;
+  border-radius: var(--vs-border-radius-sm);
+  max-width: 85%;
+  line-height: 1.4;
+  position: relative;
+  font-size: 14px;
+  animation: vs-fade-in 0.3s ease-out;
+}
+
+.vs-message.vs-sent {
+  background: var(--vs-primary);
+  color: white;
+  align-self: flex-end;
+  border-radius: 12px 2px 12px 12px;
+}
+
+.vs-message.vs-received {
+  background: var(--vs-card);
+  border: 1px solid var(--vs-border);
+  align-self: flex-start;
+  border-radius: 2px 12px 12px 12px;
+}
+
+.vs-message.vs-system {
+  background: transparent;
+  border-left: 3px solid var(--vs-info);
+  color: var(--vs-text);
+  opacity: 0.8;
+  max-width: 100%;
+  align-self: center;
+  font-style: italic;
+  font-size: 12px;
+  padding: 6px 16px;
+}
+
+.vs-sender {
+  font-weight: bold;
+  margin-bottom: 4px;
+  color: var(--vs-primary);
+}
+
+.vs-message-content {
+  word-break: break-word;
+}
+
+.vs-timestamp {
+  font-size: 10px;
+  opacity: 0.7;
+  position: absolute;
+  right: 8px;
+  bottom: 4px;
+}
+
+/* Chat form */
+.vs-chat-form {
+  display: flex;
+  gap: 8px;
+}
+
+.vs-chat-input {
+  flex: 1;
+  padding: 10px 16px;
+  font-size: 14px;
+  border: 1px solid var(--vs-border);
+  border-radius: 20px;
+  background: var(--vs-background);
+  color: var(--vs-text);
+  resize: none;
+}
+
+.vs-chat-input:focus {
+  outline: none;
+  border-color: var(--vs-primary);
+}
+
+.vs-send-btn {
+  width: 60px;
+  border: none;
+  border-radius: 20px;
+  background: var(--vs-primary);
+  color: white;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.vs-send-btn:hover {
+  transform: translateY(-1px);
+  filter: brightness(1.1);
+}
+
+/* Empty state */
+.vs-empty-state {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  padding: 24px;
+  text-align: center;
+  font-size: 14px;
+}
+
+.vs-empty-icon {
+  font-size: 32px;
+  opacity: 0.7;
+}
+
+/* Action buttons */
+.vs-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: var(--vs-spacing-sm);
+}
+
+.vs-btn {
+  padding: 10px;
+  border-radius: 8px;
+  border: none;
+  font-weight: 500;
+  font-size: 14px;
+  cursor: pointer;
+  transition: all 0.2s;
+  text-align: center;
+}
+
+.vs-btn-primary {
+  background: var(--vs-primary);
+  color: white;
+}
+
+.vs-btn-secondary {
+  background: var(--vs-secondary);
+  color: white;
+}
+
+.vs-btn-neutral {
+  background: var(--vs-card);
+  color: var(--vs-text);
+  border: 1px solid var(--vs-border);
+}
+
+.vs-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+/* Footer */
+.vs-footer {
+  padding: 12px;
+  text-align: center;
+  font-size: 11px;
+  color: var(--vs-text);
+  opacity: 0.5;
+  border-top: 1px solid var(--vs-border);
+}
+
+/* Show button when overlay is hidden */
+.vs-show-button {
+  position: fixed;
+  bottom: 20px;
+  right: 20px;
+  z-index: 9998;
+  animation: fadeIn 0.3s ease-out;
+}
+
+.vs-btn-floating {
+  padding: 10px 16px;
+  background: var(--vs-primary);
+  color: white;
+  border: none;
+  border-radius: 24px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.vs-btn-floating:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 14px rgba(0, 0, 0, 0.3);
+}
+
+.vs-btn-floating::before {
+  content: '✨';
+}
+
+/* Animations */
+@keyframes vs-fade-in {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes vs-slide-in {
+  from { transform: translateX(100%); }
+  to { transform: translateX(0); }
+}
+
+/* Notifications */
+.vs-notification {
+  position: fixed;
+  top: 20px;
+  right: 20px;
+  padding: 12px 16px;
+  background: var(--vs-background);
+  border-left: 4px solid var(--vs-primary);
+  border-radius: 4px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+  z-index: 10000;
+  animation: vs-slide-in 0.3s ease-out;
+  max-width: 300px;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+}
+
+.vs-notification.info { border-color: var(--vs-info); }
+.vs-notification.success { border-color: var(--vs-success); }
+.vs-notification.warning { border-color: var(--vs-warning); }
+.vs-notification.error { border-color: var(--vs-danger); }
+
+.vs-notification-title {
+  font-weight: 600;
+  margin-bottom: 4px;
+  font-size: 14px;
+  color: var(--vs-text);
+}
+
+.vs-notification-message {
+  color: var(--vs-text);
+  opacity: 0.8;
+  font-size: 13px;
+}
+
+.vs-notification-close {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  color: var(--vs-text);
+  opacity: 0.5;
+  font-size: 16px;
+  padding: 0;
+  width: 20px;
+  height: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.vs-notification-close:hover {
+  opacity: 1;
+}
+
+.vs-sliding-out {
+  animation: vs-slide-out 0.3s ease-in forwards;
+}
+
+@keyframes vs-slide-out {
+  to { transform: translateX(110%); opacity: 0; }
+}
+
+/* Custom scrollbar */
+.vs-chat-messages::-webkit-scrollbar {
+  width: 6px;
+}
+
+.vs-chat-messages::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.vs-chat-messages::-webkit-scrollbar-thumb {
+  background: var(--vs-border);
+  border-radius: 3px;
+}
+
+.vs-chat-messages::-webkit-scrollbar-thumb:hover {
+  background: var(--vs-primary);
+}
+
+/* Responsive adjustments */
+@media (max-width: 480px) {
+  .vs-overlay {
+    width: 90%;
+    right: 5%;
+    left: 5%;
+  }
+}

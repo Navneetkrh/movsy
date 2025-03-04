@@ -1,15 +1,15 @@
 :root {
-  --primary-color: #673AB7;
-  --primary-dark: #512DA8;
-  --accent-color: #FF5722;
-  --accent-dark: #E64A19;
-  --blue-color: #2196F3;
-  --blue-dark: #0b7dda;
-  --dark-bg: #212121;
-  --dark-surface: #333333;
-  --dark-border: #444444;
-  --light-text: #ffffff;
-  --muted-text: #cccccc;
+  --primary-color: #8B5CF6;
+  --primary-dark: #7C3AED;
+  --accent-color: #FFD7B5;
+  --accent-dark: #FEC195;
+  --blue-color: #93C5FD;
+  --blue-dark: #60A5FA;
+  --dark-bg: #FFF7ED;
+  --dark-surface: #F5E6D3;
+  --dark-border: #EDD7BE;
+  --light-text: #4A5568;
+  --muted-text: #718096;
 }
 
 /* Video Sync Panel Styles */
@@ -32,7 +32,7 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
-  background: var(--primary-color);
+  background: linear-gradient(135deg, var(--primary-color) 0%, var(--accent-color) 100%);
   padding: 10px 15px;
   cursor: move;
 }

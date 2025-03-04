@@ -18,14 +18,19 @@ const chatHistory = new Map();
 function initialize() {
   console.log('Video Sync background script initializing...');
   
-  // Load saved settings
+  // Load saved settings with proper error handling
   chrome.storage.sync.get(['serverUrl', 'username'], (items) => {
-    if (items.serverUrl) {
-      serverUrl = items.serverUrl;
-    }
-    
-    if (items.username) {
-      username = items.username;
+    // Check if items exists before trying to access properties
+    if (items) {
+      if (items.serverUrl) {
+        serverUrl = items.serverUrl;
+      }
+      
+      if (items.username) {
+        username = items.username;
+      }
+    } else {
+      console.warn('Failed to load settings from storage, using defaults');
     }
     
     // Connect to server

@@ -3,9 +3,8 @@ console.log('Video Sync content script loaded');
 // Initialize state
 let connected = false;
 let roomId = null;
-let isController = false;
 let ignoreEvents = false;
-let chatVisible = false;
+let chatVisible = true;
 let username = localStorage.getItem('videoSync_username') || 'Guest_' + Math.floor(Math.random() * 1000);
 let messageHistory = [];
 
@@ -120,7 +119,7 @@ function setupVideoSync() {
   });
   
   // Create the UI immediately
-  createEnhancedUI();
+  createUI();
 }
 
 // Find video element
@@ -185,27 +184,6 @@ function joinRoom(id) {
         if (roomIdElement) {
           roomIdElement.textContent = roomId;
         }
-        
-        // Request sync after successful join
-        setTimeout(() => {
-          chrome.runtime.sendMessage({
-            type: 'requestSync',
-            roomId: roomId
-          });
-          
-          // Request chat history
-          chrome.runtime.sendMessage({
-            type: 'getChatHistory',
-            roomId: roomId
-          }, response => {
-            if (response && response.messages) {
-              messageHistory = response.messages;
-              if (chatVisible) {
-                renderChatHistory();
-              }
-            }
-          });
-        }, 1000);
       } else {
         console.log('❌ Failed to join room:', joinResponse?.reason || 'unknown reason');
         setTimeout(() => joinRoom(roomId), 5000);
@@ -214,631 +192,201 @@ function joinRoom(id) {
   });
 }
 
-// Create an enhanced UI with chat
-function createEnhancedUI() {
-  // Add styles to the page
-  const style = document.createElement('style');
-  style.textContent = `
-    .vs-container {
-      position: fixed;
-      bottom: 20px;
-      right: 20px;
-      width: 320px;
-      background: rgba(28, 28, 30, 0.92);
-      color: white;
-      border-radius: 12px;
-      font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Helvetica Neue", Arial, sans-serif;
-      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
-      z-index: 9999;
-      border: 1px solid rgba(255, 255, 255, 0.1);
-      backdrop-filter: blur(10px);
-      -webkit-backdrop-filter: blur(10px);
-      transition: all 0.3s ease;
-      overflow: hidden;
-      padding: 0;
-      display: flex;
-      flex-direction: column;
-    }
-    
-    .vs-container.collapsed {
-      height: 40px !important;
-    }
-    
-    .vs-header {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      padding: 10px 16px;
-      background: linear-gradient(135deg, #34d399 0%, #06b6d4 100%);
-      cursor: move;
-      height: 40px;
-      box-sizing: border-box;
-    }
-    
-    .vs-title {
-      font-weight: 600;
-      font-size: 14px;
-      display: flex;
-      align-items: center;
-    }
-    
-    .vs-controls {
-      display: flex;
-      gap: 8px;
-    }
-    
-    .vs-btn {
-      background: none;
-      border: none;
-      color: white;
-      padding: 0;
-      cursor: pointer;
-      opacity: 0.8;
-      transition: opacity 0.2s;
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      height: 20px;
-      width: 20px;
-      border-radius: 4px;
-      font-size: 14px;
-    }
-    
-    .vs-btn:hover {
-      opacity: 1;
-      background: rgba(255, 255, 255, 0.2);
-    }
-    
-    .vs-content {
-      flex: 1;
-      display: flex;
-      flex-direction: column;
-      padding: 16px;
-      overflow: hidden;
-      min-height: 120px;
-    }
-    
-    .vs-section {
-      margin-bottom: 16px;
-    }
-    
-    .vs-section-header {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      margin-bottom: 8px;
-    }
-    
-    .vs-section-title {
-      font-size: 13px;
-      font-weight: 500;
-      color: rgba(255, 255, 255, 0.7);
-    }
-    
-    .vs-status {
-      display: flex;
-      align-items: center;
-      padding: 10px;
-      background: rgba(255, 255, 255, 0.05);
-      border-radius: 8px;
-      margin-bottom: 12px;
-      font-size: 13px;
-    }
-    
-    .vs-indicator {
-      width: 8px;
-      height: 8px;
-      border-radius: 50%;
-      margin-right: 8px;
-    }
-    
-    .vs-indicator.connected {
-      background: linear-gradient(145deg, #34d399, #10b981);
-      box-shadow: 0 0 6px rgba(52, 211, 153, 0.7);
-    }
-    
-    .vs-indicator.disconnected {
-      background: linear-gradient(145deg, #f87171, #ef4444);
-      box-shadow: 0 0 6px rgba(239, 68, 68, 0.7);
-    }
-    
-    .vs-label {
-      display: block;
-      font-size: 12px;
-      color: rgba(255, 255, 255, 0.7);
-      margin-bottom: 6px;
-    }
-    
-    .vs-input {
-      width: 100%;
-      padding: 8px 10px;
-      background: rgba(255, 255, 255, 0.1);
-      border: 1px solid rgba(255, 255, 255, 0.1);
-      border-radius: 6px;
-      color: white;
-      font-family: inherit;
-      font-size: 13px;
-      margin-bottom: 10px;
-    }
-    
-    .vs-input:focus {
-      outline: none;
-      border-color: rgba(52, 211, 153, 0.5);
-      box-shadow: 0 0 0 2px rgba(52, 211, 153, 0.25);
-    }
-    
-    .vs-room-id {
-      font-weight: 600;
-      color: #34d399;
-      font-size: 14px;
-      background: rgba(52, 211, 153, 0.1);
-      padding: 6px 10px;
-      border-radius: 6px;
-      text-align: center;
-      margin-bottom: 12px;
-      user-select: all;
-    }
-    
-    .vs-tabs {
-      display: flex;
-      background: rgba(255, 255, 255, 0.05);
-      border-radius: 8px;
-      margin-bottom: 12px;
-      overflow: hidden;
-    }
-    
-    .vs-tab {
-      flex: 1;
-      padding: 8px;
-      text-align: center;
-      font-size: 13px;
-      cursor: pointer;
-      transition: all 0.2s;
-      color: rgba(255, 255, 255, 0.7);
-    }
-    
-    .vs-tab.active {
-      background: rgba(52, 211, 153, 0.15);
-      color: #34d399;
-      font-weight: 500;
-    }
-    
-    .vs-tab:hover:not(.active) {
-      background: rgba(255, 255, 255, 0.1);
-    }
-    
-    .vs-tab-content {
-      display: none;
-      flex: 1;
-      overflow: hidden;
-    }
-    
-    .vs-tab-content.active {
-      display: flex;
-      flex-direction: column;
-    }
-    
-    /* Chat specific styles */
-    .vs-chat-container {
-      display: flex;
-      flex-direction: column;
-      flex: 1;
-      min-height: 200px;
-    }
-    
-    .vs-chat-messages {
-      flex: 1;
-      overflow-y: auto;
-      margin-bottom: 10px;
-      display: flex;
-      flex-direction: column;
-      gap: 8px;
-      padding-right: 6px;
-      font-size: 13px;
-    }
-    
-    .vs-message {
-      padding: 8px 10px;
-      border-radius: 8px;
-      max-width: 85%;
-      word-break: break-word;
-      position: relative;
-      line-height: 1.3;
-    }
-    
-    .vs-message.system {
-      background: rgba(0, 113, 227, 0.1);
-      color: rgba(255, 255, 255, 0.7);
-      border-left: 2px solid rgba(0, 113, 227, 0.5);
-      align-self: center;
-      width: 100%;
-      text-align: center;
-      font-style: italic;
-    }
-    
-    .vs-message.received {
-      background: rgba(255, 255, 255, 0.1);
-      border-radius: 0 8px 8px 8px;
-      align-self: flex-start;
-    }
-    
-    .vs-message.sent {
-      background: rgba(52, 211, 153, 0.2);
-      border-radius: 8px 0 8px 8px;
-      align-self: flex-end;
-    }
-    
-    .vs-sender {
-      font-weight: 600;
-      margin-right: 5px;
-      font-size: 12px;
-      color: #34d399;
-    }
-    
-    .vs-sender.system {
-      color: #0071e3;
-    }
-    
-    .vs-timestamp {
-      font-size: 10px;
-      color: rgba(255, 255, 255, 0.5);
-      position: absolute;
-      bottom: 2px;
-      right: 6px;
-    }
-    
-    .vs-form {
-      display: flex;
-      gap: 8px;
-    }
-    
-    .vs-chat-input {
-      flex: 1;
-      padding: 8px 12px;
-      background: rgba(255, 255, 255, 0.1);
-      border: 1px solid rgba(255, 255, 255, 0.1);
-      border-radius: 20px;
-      color: white;
-      font-family: inherit;
-      font-size: 13px;
-    }
-    
-    .vs-chat-input:focus {
-      outline: none;
-      border-color: rgba(52, 211, 153, 0.5);
-    }
-    
-    .vs-send-btn {
-      background: linear-gradient(135deg, #34d399, #06b6d4);
-      color: white;
-      border: none;
-      border-radius: 20px;
-      width: 60px;
-      font-size: 13px;
-      cursor: pointer;
-      transition: all 0.2s;
-    }
-    
-    .vs-send-btn:hover {
-      transform: translateY(-1px);
-      box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
-    }
-    
-    /* Credit */
-    .vs-credit {
-      font-size: 10px;
-      color: rgba(255, 255, 255, 0.4);
-      text-align: center;
-      padding: 8px;
-      background: rgba(0, 0, 0, 0.2);
-    }
-    
-    .vs-credit a {
-      color: rgba(52, 211, 153, 0.8);
-      text-decoration: none;
-    }
-    
-    /* Scrollbar styles */
-    .vs-chat-messages::-webkit-scrollbar {
-      width: 6px;
-    }
-    
-    .vs-chat-messages::-webkit-scrollbar-track {
-      background: rgba(255, 255, 255, 0.05);
-      border-radius: 3px;
-    }
-    
-    .vs-chat-messages::-webkit-scrollbar-thumb {
-      background: rgba(255, 255, 255, 0.2);
-      border-radius: 3px;
-    }
-    
-    .vs-chat-messages::-webkit-scrollbar-thumb:hover {
-      background: rgba(255, 255, 255, 0.3);
-    }
-    
-    /* User info styles */
-    .vs-user-info {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      margin-bottom: 12px;
-    }
-    
-    .vs-avatar {
-      width: 28px;
-      height: 28px;
-      border-radius: 50%;
-      background: linear-gradient(135deg, #0071e3, #0099ff);
-      color: white;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-weight: bold;
-      font-size: 14px;
-    }
-    
-    .vs-username-input {
-      flex: 1;
-      border-radius: 20px;
-    }
-    
-    /* Member count */
-    .vs-member-count {
-      background: rgba(255, 255, 255, 0.1);
-      padding: 4px 8px;
-      border-radius: 12px;
-      font-size: 11px;
-      color: rgba(255, 255, 255, 0.7);
-      display: flex;
-      align-items: center;
-      gap: 4px;
-    }
-  `;
-  
-  document.head.appendChild(style);
-  
+// Create simple UI (reduced version without dependencies)
+function createUI() {
   // Create main container
   const container = document.createElement('div');
-  container.className = 'vs-container';
+  container.className = 'vs-overlay';
   container.id = 'video-sync-container';
-  container.style.height = '330px';
+  container.style.position = 'fixed';
+  container.style.bottom = '20px';
+  container.style.right = '20px';
+  container.style.width = '320px';
+  container.style.zIndex = '9999';
+  container.style.background = 'rgba(255, 255, 255, 0.9)';
+  container.style.borderRadius = '12px';
+  container.style.boxShadow = '0 4px 20px rgba(0, 0, 0, 0.3)';
+  container.style.fontFamily = 'Arial, sans-serif';
+  container.style.color = '#333';
+  container.style.overflow = 'hidden';
   
-  // Create header for dragging
+  // Create header
   const header = document.createElement('div');
-  header.className = 'vs-header';
+  header.style.padding = '10px 15px';
+  header.style.background = 'linear-gradient(135deg, #c4b5fd 0%, #ffcba4 100%)';
+  header.style.color = 'white';
+  header.style.display = 'flex';
+  header.style.justifyContent = 'space-between';
+  header.style.alignItems = 'center';
+  header.style.cursor = 'move';
   
+  // Title in header
   const title = document.createElement('div');
-  title.className = 'vs-title';
-  title.innerHTML = '<span style="margin-right: 8px;">✨</span> Video Sync';
+  title.innerHTML = '✨ Video Sync';
+  title.style.fontWeight = 'bold';
   
-  const controls = document.createElement('div');
-  controls.className = 'vs-controls';
-  
+  // Collapse button
   const collapseBtn = document.createElement('button');
-  collapseBtn.className = 'vs-btn';
   collapseBtn.innerHTML = '▼';
-  collapseBtn.title = 'Collapse';
+  collapseBtn.style.background = 'transparent';
+  collapseBtn.style.border = 'none';
+  collapseBtn.style.color = 'white';
+  collapseBtn.style.cursor = 'pointer';
+  collapseBtn.style.fontSize = '12px';
   
-  controls.appendChild(collapseBtn);
   header.appendChild(title);
-  header.appendChild(controls);
+  header.appendChild(collapseBtn);
   
-  // Create content area
+  // Content area
   const content = document.createElement('div');
-  content.className = 'vs-content';
+  content.style.padding = '15px';
   
   // Status section
-  const statusSection = document.createElement('div');
-  statusSection.className = 'vs-section';
+  const status = document.createElement('div');
+  status.style.display = 'flex';
+  status.style.alignItems = 'center';
+  status.style.marginBottom = '10px';
+  status.style.padding = '8px 10px';
+  status.style.background = 'rgba(255, 255, 255, 0.5)';
+  status.style.borderRadius = '8px';
+  status.style.fontSize = '13px';
   
   const statusIndicator = document.createElement('div');
-  statusIndicator.className = 'vs-status';
+  statusIndicator.id = 'vs-connection-indicator';
+  statusIndicator.style.width = '8px';
+  statusIndicator.style.height = '8px';
+  statusIndicator.style.borderRadius = '50%';
+  statusIndicator.style.marginRight = '8px';
+  statusIndicator.style.background = connected ? '#34d399' : '#f87171';
   
-  const indicator = document.createElement('div');
-  indicator.id = 'vs-connection-indicator';
-  indicator.className = 'vs-indicator ' + (connected ? 'connected' : 'disconnected');
-  
-  const statusText = document.createElement('span');
+  const statusText = document.createElement('div');
   statusText.id = 'vs-connection-status';
   statusText.textContent = connected ? 'Connected' : 'Disconnected';
   
-  statusIndicator.appendChild(indicator);
-  statusIndicator.appendChild(statusText);
-  statusSection.appendChild(statusIndicator);
+  status.appendChild(statusIndicator);
+  status.appendChild(statusText);
   
   // Room info
-  const roomIdContainer = document.createElement('div');
-  roomIdContainer.className = 'vs-room-id';
-  roomIdContainer.id = 'vs-room-id';
-  roomIdContainer.textContent = roomId || 'No active room';
-  statusSection.appendChild(roomIdContainer);
-  
-  // Tabs
-  const tabs = document.createElement('div');
-  tabs.className = 'vs-tabs';
-  
-  const chatTab = document.createElement('div');
-  chatTab.className = 'vs-tab active';
-  chatTab.textContent = 'Chat';
-  chatTab.dataset.tab = 'chat';
-  
-  const controlsTab = document.createElement('div');
-  controlsTab.className = 'vs-tab';
-  controlsTab.textContent = 'Controls';
-  controlsTab.dataset.tab = 'controls';
-  
-  tabs.appendChild(chatTab);
-  tabs.appendChild(controlsTab);
-  
-  // Tab content
-  const chatContent = document.createElement('div');
-  chatContent.className = 'vs-tab-content active';
-  chatContent.dataset.tab = 'chat';
-  
-  const controlsContent = document.createElement('div');
-  controlsContent.className = 'vs-tab-content';
-  controlsContent.dataset.tab = 'controls';
-  
-  // Chat interface
-  const chatContainer = document.createElement('div');
-  chatContainer.className = 'vs-chat-container';
-  
-  // User info in chat
-  const userInfo = document.createElement('div');
-  userInfo.className = 'vs-user-info';
-  
-  const avatar = document.createElement('div');
-  avatar.className = 'vs-avatar';
-  avatar.id = 'vs-avatar';
-  avatar.textContent = username.charAt(0).toUpperCase();
-  
-  const usernameInput = document.createElement('input');
-  usernameInput.className = 'vs-input vs-username-input';
-  usernameInput.id = 'vs-username';
-  usernameInput.value = username;
-  usernameInput.placeholder = 'Your name';
-  
-  userInfo.appendChild(avatar);
-  userInfo.appendChild(usernameInput);
-  
-  // Room info with member count
   const roomInfo = document.createElement('div');
-  roomInfo.className = 'vs-section-header';
+  roomInfo.style.textAlign = 'center';
+  roomInfo.style.marginBottom = '15px';
+  roomInfo.style.padding = '10px';
+  roomInfo.style.background = 'rgba(255, 255, 255, 0.6)';
+  roomInfo.style.borderRadius = '8px';
   
-  const roomTitle = document.createElement('div');
-  roomTitle.className = 'vs-section-title';
-  roomTitle.textContent = 'Chat Room';
+  const roomIdDisplay = document.createElement('div');
+  roomIdDisplay.id = 'vs-room-id';
+  roomIdDisplay.textContent = roomId || 'No active room';
+  roomIdDisplay.style.fontWeight = 'bold';
+  roomIdDisplay.style.marginBottom = '5px';
+  roomIdDisplay.style.color = '#8b5cf6';
   
-  const memberCount = document.createElement('div');
-  memberCount.className = 'vs-member-count';
-  memberCount.innerHTML = '<span>👥</span> <span id="vs-member-count">-</span>';
+  const memberCountDisplay = document.createElement('div');
+  memberCountDisplay.id = 'vs-member-count';
+  memberCountDisplay.innerHTML = '👥 <span>0</span> participants';
+  memberCountDisplay.style.fontSize = '12px';
   
-  roomInfo.appendChild(roomTitle);
-  roomInfo.appendChild(memberCount);
+  roomInfo.appendChild(roomIdDisplay);
+  roomInfo.appendChild(memberCountDisplay);
   
-  // Chat messages
+  // Chat area
+  const chatArea = document.createElement('div');
+  chatArea.style.display = 'flex';
+  chatArea.style.flexDirection = 'column';
+  
   const chatMessages = document.createElement('div');
-  chatMessages.className = 'vs-chat-messages';
   chatMessages.id = 'vs-chat-messages';
+  chatMessages.style.height = '150px';
+  chatMessages.style.overflowY = 'auto';
+  chatMessages.style.padding = '10px';
+  chatMessages.style.background = 'white';
+  chatMessages.style.borderRadius = '8px';
+  chatMessages.style.marginBottom = '10px';
+  chatMessages.style.fontSize = '13px';
   
-  // Chat form
   const chatForm = document.createElement('div');
-  chatForm.className = 'vs-form';
+  chatForm.style.display = 'flex';
+  chatForm.style.gap = '8px';
   
   const chatInput = document.createElement('input');
-  chatInput.className = 'vs-chat-input';
   chatInput.id = 'vs-chat-input';
+  chatInput.type = 'text';
   chatInput.placeholder = 'Type a message...';
+  chatInput.style.flex = '1';
+  chatInput.style.padding = '8px 12px';
+  chatInput.style.borderRadius = '20px';
+  chatInput.style.border = '1px solid #e5e7eb';
   
-  const sendBtn = document.createElement('button');
-  sendBtn.className = 'vs-send-btn';
-  sendBtn.textContent = 'Send';
+  const sendButton = document.createElement('button');
+  sendButton.textContent = 'Send';
+  sendButton.style.padding = '8px 12px';
+  sendButton.style.background = '#8b5cf6';
+  sendButton.style.color = 'white';
+  sendButton.style.border = 'none';
+  sendButton.style.borderRadius = '20px';
+  sendButton.style.cursor = 'pointer';
+  sendButton.style.fontWeight = 'bold';
   
   chatForm.appendChild(chatInput);
-  chatForm.appendChild(sendBtn);
+  chatForm.appendChild(sendButton);
   
-  // Build chat interface
-  chatContainer.appendChild(roomInfo);
-  chatContainer.appendChild(userInfo);
-  chatContainer.appendChild(chatMessages);
-  chatContainer.appendChild(chatForm);
-  chatContent.appendChild(chatContainer);
-  
-  // Controls interface
-  const controlsContainer = document.createElement('div');
-  controlsContainer.innerHTML = '<div class="vs-section-title" style="margin-bottom: 12px;">Video Controls</div>';
-  controlsContainer.innerHTML += '<p style="font-size: 13px; color: rgba(255, 255, 255, 0.6); margin-bottom: 16px;">Any play, pause or seek actions you perform will be synchronized with everyone in your room.</p>';
-  
-  // Add playback controls
-  const controlsInfo = document.createElement('div');
-  controlsInfo.className = 'vs-status';
-  controlsInfo.style.justifyContent = 'center';
-  controlsInfo.innerHTML = 'Sync is active and working';
-  controlsContainer.appendChild(controlsInfo);
-  
-  controlsContent.appendChild(controlsContainer);
-  
-  // Credit
-  const credit = document.createElement('div');
-  credit.className = 'vs-credit';
-  credit.innerHTML = 'Made by Navneet';
+  chatArea.appendChild(chatMessages);
+  chatArea.appendChild(chatForm);
   
   // Assemble UI
-  content.appendChild(statusSection);
-  content.appendChild(tabs);
-  content.appendChild(chatContent);
-  content.appendChild(controlsContent);
+  content.appendChild(status);
+  content.appendChild(roomInfo);
+  content.appendChild(chatArea);
   
   container.appendChild(header);
   container.appendChild(content);
-  container.appendChild(credit);
   
-  // Add UI to page
+  // Add to page
   document.body.appendChild(container);
   
-  // Make container draggable
-  makeDraggable(container, header);
+  // Make draggable (simplified)
+  let isDragging = false;
+  let dragOffsetX = 0;
+  let dragOffsetY = 0;
   
-  // Event handlers
-  
-  // Toggle collapse
-  collapseBtn.onclick = () => {
-    if (container.classList.contains('collapsed')) {
-      container.classList.remove('collapsed');
-      collapseBtn.innerHTML = '▼';
-    } else {
-      container.classList.add('collapsed');
-      collapseBtn.innerHTML = '▲';
-    }
-  };
-  
-  // Tab switching
-  tabs.querySelectorAll('.vs-tab').forEach(tab => {
-    tab.onclick = () => {
-      // Remove active class from all tabs
-      tabs.querySelectorAll('.vs-tab').forEach(t => t.classList.remove('active'));
-      
-      // Hide all tab contents
-      document.querySelectorAll('.vs-tab-content').forEach(c => c.classList.remove('active'));
-      
-      // Activate clicked tab
-      tab.classList.add('active');
-      document.querySelector(`.vs-tab-content[data-tab="${tab.dataset.tab}"]`).classList.add('active');
-      
-      // Handle chat tab visibility
-      if (tab.dataset.tab === 'chat') {
-        chatVisible = true;
-        renderChatHistory(); // Render any messages received while tab was inactive
-      } else {
-        chatVisible = false;
-      }
-    };
+  header.addEventListener('mousedown', (e) => {
+    isDragging = true;
+    dragOffsetX = e.clientX - container.getBoundingClientRect().left;
+    dragOffsetY = e.clientY - container.getBoundingClientRect().top;
+    
+    // Add visual feedback
+    container.style.opacity = '0.8';
   });
   
-  // Update username
-  usernameInput.onchange = () => {
-    const newUsername = usernameInput.value.trim();
-    if (!newUsername) {
-      usernameInput.value = username;
-      return;
+  document.addEventListener('mousemove', (e) => {
+    if (isDragging) {
+      const newLeft = e.clientX - dragOffsetX;
+      const newTop = e.clientY - dragOffsetY;
+      
+      // Constrain to viewport
+      const maxX = window.innerWidth - container.offsetWidth;
+      const maxY = window.innerHeight - container.offsetHeight;
+      
+      container.style.left = Math.max(0, Math.min(newLeft, maxX)) + 'px';
+      container.style.top = Math.max(0, Math.min(newTop, maxY)) + 'px';
     }
-    
-    username = newUsername;
-    localStorage.setItem('videoSync_username', username);
-    
-    // Update avatar
-    avatar.textContent = username.charAt(0).toUpperCase();
-    
-    // Notify server
-    if (roomId) {
-      chrome.runtime.sendMessage({
-        type: 'updateUsername',
-        username: username,
-        roomId: roomId
-      });
+  });
+  
+  document.addEventListener('mouseup', () => {
+    isDragging = false;
+    container.style.opacity = '1';
+  });
+  
+  // Toggle collapse
+  collapseBtn.addEventListener('click', () => {
+    if (content.style.display === 'none') {
+      content.style.display = 'block';
+      collapseBtn.innerHTML = '▼';
+    } else {
+      content.style.display = 'none';
+      collapseBtn.innerHTML = '▲';
     }
-  };
+  });
   
   // Send chat message
   function sendChatMessage() {
@@ -855,7 +403,7 @@ function createEnhancedUI() {
     chatInput.value = '';
   }
   
-  sendBtn.onclick = sendChatMessage;
+  sendButton.onclick = sendChatMessage;
   
   chatInput.onkeypress = (e) => {
     if (e.key === 'Enter') {
@@ -950,10 +498,10 @@ function updateConnectionIndicator(isConnected) {
   if (!indicator || !statusText) return;
   
   if (isConnected) {
-    indicator.className = 'vs-indicator connected';
+    indicator.style.background = '#34d399';
     statusText.textContent = 'Connected to sync server';
   } else {
-    indicator.className = 'vs-indicator disconnected';
+    indicator.style.background = '#f87171';
     statusText.textContent = 'Disconnected from sync server';
   }
 }
@@ -962,69 +510,7 @@ function updateConnectionIndicator(isConnected) {
 function updateMemberCount(count) {
   const memberCountEl = document.getElementById('vs-member-count');
   if (memberCountEl) {
-    memberCountEl.textContent = count || '1';
-  }
-}
-
-// Make element draggable with improved positioning
-function makeDraggable(element, handle) {
-  let pos1 = 0, pos2 = 0, pos3 = 0, pos4 = 0;
-  let isDragging = false;
-  
-  handle.onmousedown = dragMouseDown;
-  
-  function dragMouseDown(e) {
-    e = e || window.event;
-    e.preventDefault();
-    
-    // Get the initial mouse cursor position
-    pos3 = e.clientX;
-    pos4 = e.clientY;
-    
-    isDragging = true;
-    
-    document.onmouseup = closeDragElement;
-    document.onmousemove = elementDrag;
-    
-    // Add dragging class for visual feedback
-    element.classList.add('dragging');
-  }
-  
-  function elementDrag(e) {
-    e = e || window.event;
-    e.preventDefault();
-    
-    if (!isDragging) return;
-    
-    // Calculate the new cursor position
-    pos1 = pos3 - e.clientX;
-    pos2 = pos4 - e.clientY;
-    pos3 = e.clientX;
-    pos4 = e.clientY;
-    
-    // Set the element's new position with boundaries
-    const newTop = (element.offsetTop - pos2);
-    const newLeft = (element.offsetLeft - pos1);
-    
-    // Keep element within viewport
-    const maxX = window.innerWidth - element.offsetWidth;
-    const maxY = window.innerHeight - element.offsetHeight;
-    
-    element.style.top = Math.min(Math.max(0, newTop), maxY) + "px";
-    element.style.left = Math.min(Math.max(0, newLeft), maxX) + "px";
-    
-    // Remove transform to use absolute positioning
-    element.style.transform = 'none';
-  }
-  
-  function closeDragElement() {
-    // Stop moving when mouse button is released
-    document.onmouseup = null;
-    document.onmousemove = null;
-    isDragging = false;
-    
-    // Remove dragging class
-    element.classList.remove('dragging');
+    memberCountEl.querySelector('span').textContent = count || '1';
   }
 }
 

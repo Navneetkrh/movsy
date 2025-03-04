@@ -169,3 +169,95 @@ document.addEventListener('DOMContentLoaded', function() {
     );
   }
 });
+
+/**
+ * Options page controller
+ * Handles saving and loading options
+ */
+
+document.addEventListener('DOMContentLoaded', loadOptions);
+
+// Default options
+const defaultOptions = {
+  serverUrl: 'ws://localhost:3000',
+  reconnectAttempts: 5,
+  darkMode: false,
+  rememberPosition: true,
+  overlayOpacity: 85,
+  autoJoin: true,
+  autoCollapse: false,
+  username: `Guest_${Math.floor(Math.random() * 10000)}`
+};
+
+// Load options from storage
+function loadOptions() {
+  chrome.storage.sync.get(defaultOptions, (options) => {
+    document.getElementById('server-url').value = options.serverUrl;
+    document.getElementById('reconnect-attempts').value = options.reconnectAttempts;
+    document.getElementById('dark-mode').checked = options.darkMode;
+    document.getElementById('remember-position').checked = options.rememberPosition;
+    document.getElementById('overlay-opacity').value = options.overlayOpacity;
+    document.getElementById('auto-join').checked = options.autoJoin;
+    document.getElementById('auto-collapse').checked = options.autoCollapse;
+    document.getElementById('username').value = options.username;
+    
+    console.log('Options loaded:', options);
+  });
+  
+  // Add event listeners
+  document.getElementById('save-btn').addEventListener('click', saveOptions);
+  document.getElementById('reset-btn').addEventListener('click', resetOptions);
+}
+
+// Save options to storage
+function saveOptions() {
+  const options = {
+    serverUrl: document.getElementById('server-url').value,
+    reconnectAttempts: parseInt(document.getElementById('reconnect-attempts').value) || 5,
+    darkMode: document.getElementById('dark-mode').checked,
+    rememberPosition: document.getElementById('remember-position').checked,
+    overlayOpacity: parseInt(document.getElementById('overlay-opacity').value) || 85,
+    autoJoin: document.getElementById('auto-join').checked,
+    autoCollapse: document.getElementById('auto-collapse').checked,
+    username: document.getElementById('username').value
+  };
+  
+  chrome.storage.sync.set(options, () => {
+    showToast('Settings saved successfully!');
+    console.log('Options saved:', options);
+    
+    // Notify background script about server URL change
+    chrome.runtime.sendMessage({
+      type: 'updateServerUrl',
+      url: options.serverUrl
+    });
+    
+    // Notify about username change
+    chrome.runtime.sendMessage({
+      type: 'updateUsername',
+      username: options.username
+    });
+  });
+}
+
+// Reset options to defaults
+function resetOptions() {
+  if (confirm('Are you sure you want to reset all settings to default values?')) {
+    chrome.storage.sync.set(defaultOptions, () => {
+      // Reload the form with default values
+      loadOptions();
+      showToast('Settings have been reset to defaults');
+    });
+  }
+}
+
+// Show toast message
+function showToast(message) {
+  const toast = document.getElementById('toast');
+  toast.textContent = message;
+  toast.classList.add('show');
+  
+  setTimeout(() => {
+    toast.classList.remove('show');
+  }, 3000);
+}

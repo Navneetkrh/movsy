@@ -1,0 +1,76 @@
+/**
+ * Draggable Element Styles
+ * Provides smooth drag and drop experience
+ */
+
+/* Draggable element base styles */
+.vs-draggable {
+  position: fixed !important;
+  user-select: none !important;
+}
+
+/* Draggable handle - the area that can be grabbed */
+.vs-drag-handle {
+  cursor: move !important;
+  touch-action: none !important;
+}
+
+/* Visual feedback for when dragging happens */
+.vs-dragging {
+  opacity: 0.9 !important;
+  transform: scale(0.98) !important;
+  transition: all 0.1s ease-out !important;
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2) !important;
+}
+
+/* Drag constraints */
+.vs-constrain-x {
+  top: 0 !important;
+  bottom: 0 !important;
+}
+
+.vs-constrain-y {
+  left: 0 !important;
+  right: 0 !important;
+}
+
+/* Animation for releasing the drag */
+@keyframes vs-settle {
+  from { transform: scale(0.98); }
+  to { transform: scale(1); }
+}
+
+.vs-drag-end {
+  animation: vs-settle 0.2s ease-out forwards;
+}
+
+/* Touch-specific styles for mobile devices */
+@media (pointer: coarse) {
+  .vs-drag-handle {
+    cursor: default !important;
+  }
+  
+  .vs-drag-handle::before {
+    content: '☰';
+    display: inline-block;
+    margin-right: 8px;
+    opacity: 0.7;
+  }
+}
+
+/* Positioning styles for the floating overlay */
+.vs-position-top {
+  top: 20px !important;
+}
+
+.vs-position-bottom {
+  bottom: 20px !important;
+}
+
+.vs-position-left {
+  left: 20px !important;
+}
+
+.vs-position-right {
+  right: 20px !important;
+}

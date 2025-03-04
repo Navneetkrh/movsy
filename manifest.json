@@ -2,7 +2,7 @@
   "manifest_version": 3,
   "name": "Video Sync",
   "version": "1.0",
-  "description": "Watch videos in sync with friends",
+  "description": "Watch videos in sync with friends using soft pastel color themes",
   "icons": {
     "16": "icons/icon16.png",
     "48": "icons/icon48.png",
@@ -23,7 +23,18 @@
     {
       "matches": ["<all_urls>"],
       "js": ["content.js"],
+      "css": ["soft-theme.css"],
       "run_at": "document_idle"
+    }
+  ],
+  "web_accessible_resources": [
+    {
+      "resources": [
+        "soft-theme.css",
+        "overlay-controller.js",
+        "icons/*"
+      ],
+      "matches": ["<all_urls>"]
     }
   ],
   "options_ui": {
@@ -37,8 +48,5 @@
   ],
   "host_permissions": [
     "*://*/*"
-  ],
-  "content_security_policy": {
-    "extension_pages": "script-src 'self'; object-src 'self'"
-  }
+  ]
 }

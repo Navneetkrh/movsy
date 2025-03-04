@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Generate Video Sync Icons</title>
+  <style>
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", Arial, sans-serif;
+      max-width: 800px;
+      margin: 0 auto;
+      padding: 20px;
+      background: #f9f9fb;
+      color: #333;
+      line-height: 1.6;
+    }
+    
+    h1 {
+      color: #8b5cf6;
+      text-align: center;
+    }
+    
+    .instruction {
+      background: #fff;
+      padding: 20px;
+      border-radius: 10px;
+      box-shadow: 0 2px 10px rgba(167, 139, 250, 0.15);
+      margin-bottom: 20px;
+    }
+    
+    .icon-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+      gap: 20px;
+      margin: 30px 0;
+    }
+    
+    .icon-box {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 20px;
+      background: white;
+      border-radius: 10px;
+      box-shadow: 0 2px 8px rgba(167, 139, 250, 0.15);
+    }
+    
+    canvas {
+      display: block;
+      margin-bottom: 15px;
+      background: #fff;
+      border-radius: 8px;
+      box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+      image-rendering: pixelated;
+    }
+    
+    button {
+      background: linear-gradient(135deg, #c4b5fd 0%, #a78bfa 100%);
+      color: white;
+      border: none;
+      padding: 10px 20px;
+      border-radius: 8px;
+      font-weight: 500;
+      cursor: pointer;
+      margin-top: 20px;
+      transition: all 0.2s;
+    }
+    
+    button:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 2px 8px rgba(167, 139, 250, 0.3);
+    }
+    
+    a.download-link {
+      color: #8b5cf6;
+      text-decoration: none;
+      padding: 8px 12px;
+      border: 1px solid #c4b5fd;
+      border-radius: 6px;
+      font-size: 14px;
+      margin-top: 10px;
+      display: inline-block;
+      transition: all 0.2s;
+    }
+    
+    a.download-link:hover {
+      background: #f9f7ff;
+      border-color: #a78bfa;
+    }
+  </style>
+</head>
+<body>
+  <h1>Video Sync Icon Generator</h1>
+  
+  <div class="instruction">
+    <p>This page generates the icon files needed for the Video Sync extension. After generating, download each icon and save it in your extension's 'icons' folder.</p>
+    <p><strong>Important:</strong> Make sure to name them exactly as shown: icon16.png, icon48.png, and icon128.png.</p>
+  </div>
+  
+  <div class="icon-grid">
+    <div class="icon-box">
+      <canvas id="canvas16" width="16" height="16"></canvas>
+      <span>icon16.png</span>
+      <a id="download16" class="download-link" download="icon16.png">Download</a>
+    </div>
+    
+    <div class="icon-box">
+      <canvas id="canvas48" width="48" height="48"></canvas>
+      <span>icon48.png</span>
+      <a id="download48" class="download-link" download="icon48.png">Download</a>
+    </div>
+    
+    <div class="icon-box">
+      <canvas id="canvas128" width="128" height="128"></canvas>
+      <span>icon128.png</span>
+      <a id="download128" class="download-link" download="icon128.png">Download</a>
+    </div>
+  </div>
+  
+  <div style="text-align: center">
+    <button id="generateBtn">Generate Icons</button>
+  </div>
+  
+  <script>
+    // Generate icons when page loads
+    document.addEventListener('DOMContentLoaded', generateIcons);
+    
+    // Also generate when button is clicked
+    document.getElementById('generateBtn').addEventListener('click', generateIcons);
+    
+    function generateIcons() {
+      const sizes = [16, 48, 128];
+      
+      sizes.forEach(size => {
+        drawIcon(size);
+      });
+    }
+    
+    function drawIcon(size) {
+      const canvas = document.getElementById(`canvas${size}`);
+      const ctx = canvas.getContext('2d');
+      const downloadLink = document.getElementById(`download${size}`);
+      
+      // Clear canvas
+      ctx.clearRect(0, 0, size, size);
+      
+      // Draw gradient background
+      const gradient = ctx.createLinearGradient(0, 0, size, size);
+      gradient.addColorStop(0, '#c4b5fd');  // Light purple
+      gradient.addColorStop(1, '#ffcba4');  // Peach
+      
+      ctx.fillStyle = gradient;
+      ctx.beginPath();
+      ctx.arc(size/2, size/2, size/2, 0, Math.PI * 2);
+      ctx.fill();
+      
+      // Draw play triangle
+      const triangleSize = size * 0.4;
+      ctx.fillStyle = 'white';
+      ctx.beginPath();
+      ctx.moveTo(size * 0.4, size * 0.35);
+      ctx.lineTo(size * 0.7, size * 0.5);
+      ctx.lineTo(size * 0.4, size * 0.65);
+      ctx.closePath();
+      ctx.fill();
+      
+      // Draw sync icon (simplified for small sizes)
+      if (size >= 48) {
+        const syncSize = size * 0.25;
+        const centerX = size * 0.6;
+        const centerY = size * 0.6;
+        
+        ctx.fillStyle = 'rgba(255, 255, 255, 0.7)';
+        ctx.beginPath();
+        ctx.arc(centerX, centerY, syncSize, 0, Math.PI * 2);
+        ctx.fill();
+        
+        ctx.strokeStyle = '#c4b5fd';
+        ctx.lineWidth = size * 0.05;
+        ctx.beginPath();
+        ctx.arc(centerX, centerY, syncSize * 0.7, 0, Math.PI * 1.5);
+        ctx.stroke();
+        
+        // Arrow
+        ctx.fillStyle = '#c4b5fd';
+        ctx.beginPath();
+        ctx.moveTo(centerX, centerY - syncSize);
+        ctx.lineTo(centerX - syncSize * 0.3, centerY - syncSize * 0.7);
+        ctx.lineTo(centerX + syncSize * 0.3, centerY - syncSize * 0.7);
+        ctx.closePath();
+        ctx.fill();
+      }
+      
+      // Update download link
+      downloadLink.href = canvas.toDataURL('image/png');
+    }
+  </script>
+</body>
+</html>

@@ -1,0 +1,906 @@
+/* Soft Theme - Light Purple, Beige, and Peach color scheme */
+
+:root {
+  /* Color Palette */
+  --primary-purple: #a78bfa;
+  --light-purple: #c4b5fd;
+  --dark-purple: #8b5cf6;
+  --beige: #f5f5dc;
+  --light-beige: #faf7ed;
+  --peach: #ffcba4;
+  --dark-peach: #ffbb94;
+  --text-dark: #4b3f72;
+  --text-light: #faf7ed;
+  --text-muted: #8a7faa;
+  --bg-gradient: linear-gradient(135deg, var(--light-purple) 0%, var(--peach) 50%, var(--light-beige) 100%);
+  --shadow-color: rgba(167, 139, 250, 0.25);
+  
+  /* Measurements */
+  --border-radius: 16px;
+  --border-radius-sm: 8px;
+  --spacing-xs: 4px;
+  --spacing-sm: 8px;
+  --spacing-md: 16px;
+  --spacing-lg: 24px;
+  
+  /* Font */
+  --font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+}
+
+/* Main overlay container */
+.vs-overlay {
+  position: fixed;
+  bottom: 20px;
+  right: 20px;
+  width: 350px;
+  background: var(--light-beige);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  border-radius: var(--border-radius);
+  box-shadow: 0 10px 25px var(--shadow-color);
+  font-family: var(--font-family);
+  z-index: 9999;
+  overflow: hidden;
+  border: 1px solid var(--light-purple);
+  transition: all 0.3s ease;
+  color: var(--text-dark);
+  display: flex;
+  flex-direction: column;
+}
+
+/* Header with gradient background */
+.vs-header {
+  padding: var(--spacing-md);
+  background: var(--bg-gradient);
+  color: var(--text-light);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  cursor: move;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.vs-header-title {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-sm);
+  font-weight: 600;
+  font-size: 16px;
+}
+
+.vs-header-controls {
+  display: flex;
+  gap: var(--spacing-xs);
+}
+
+/* Control buttons */
+.vs-btn-icon {
+  width: 24px;
+  height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(255, 255, 255, 0.2);
+  border: none;
+  border-radius: 50%;
+  color: white;
+  cursor: pointer;
+  transition: background 0.2s;
+  font-size: 12px;
+}
+
+.vs-btn-icon:hover {
+  background: rgba(255, 255, 255, 0.4);
+}
+
+/* Main content container */
+.vs-content {
+  padding: var(--spacing-md);
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  overflow: hidden;
+}
+
+/* Room info with soft background */
+.vs-room-info {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--spacing-sm) var(--spacing-md);
+  background: var(--light-beige);
+  border-radius: var(--border-radius-sm);
+  margin-bottom: var(--spacing-md);
+  border: 1px solid rgba(167, 139, 250, 0.2);
+}
+
+.vs-room-id {
+  font-weight: 600;
+  color: var(--dark-purple);
+}
+
+.vs-member-count {
+  background: var(--light-purple);
+  color: white;
+  padding: 2px var(--spacing-sm);
+  border-radius: 12px;
+  font-size: 12px;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+/* User profile area */
+.vs-user-profile {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-sm);
+  margin-bottom: var(--spacing-md);
+  padding: var(--spacing-sm);
+  background: rgba(255, 255, 255, 0.5);
+  border-radius: var(--border-radius-sm);
+  border: 1px solid rgba(167, 139, 250, 0.2);
+}
+
+.vs-avatar {
+  width: 32px;
+  height: 32px;
+  background: var(--bg-gradient);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  font-weight: bold;
+}
+
+.vs-username-input {
+  flex: 1;
+  padding: var(--spacing-sm);
+  border: 1px solid var(--light-purple);
+  border-radius: var(--border-radius-sm);
+  font-size: 14px;
+  background: rgba(255, 255, 255, 0.8);
+  color: var(--text-dark);
+}
+
+.vs-username-input:focus {
+  outline: none;
+  border-color: var(--dark-purple);
+  box-shadow: 0 0 0 2px rgba(139, 92, 246, 0.2);
+}
+
+/* Chat area */
+.vs-chat-container {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  overflow: hidden;
+}
+
+.vs-chat-messages {
+  flex: 1;
+  padding: var(--spacing-sm);
+  overflow-y: auto;
+  background: white;
+  border-radius: var(--border-radius-sm);
+  margin-bottom: var(--spacing-md);
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-sm);
+  min-height: 200px;
+  max-height: 300px;
+  border: 1px solid rgba(167, 139, 250, 0.2);
+}
+
+/* Message styles */
+.vs-message {
+  padding: var(--spacing-sm) var(--spacing-md);
+  border-radius: var(--border-radius-sm);
+  max-width: 85%;
+  line-height: 1.4;
+  position: relative;
+  font-size: 14px;
+}
+
+.vs-message.received {
+  background: var(--light-beige);
+  border-radius: 0 var(--border-radius-sm) var(--border-radius-sm) var(--border-radius-sm);
+  align-self: flex-start;
+  color: var(--text-dark);
+}
+
+.vs-message.sent {
+  background: var(--light-purple);
+  border-radius: var(--border-radius-sm) 0 var(--border-radius-sm) var(--border-radius-sm);
+  align-self: flex-end;
+  color: white;
+}
+
+.vs-message.system {
+  background: rgba(167, 139, 250, 0.1);
+  border-left: 3px solid var(--primary-purple);
+  color: var(--text-muted);
+  width: 90%;
+  align-self: center;
+  font-style: italic;
+  font-size: 13px;
+  padding: var(--spacing-xs) var(--spacing-md);
+}
+
+.vs-sender {
+  font-weight: 600;
+  font-size: 13px;
+  margin-bottom: 2px;
+}
+
+.vs-sender.received {
+  color: var(--dark-purple);
+}
+
+.vs-timestamp {
+  font-size: 10px;
+  opacity: 0.7;
+  margin-top: 3px;
+  text-align: right;
+}
+
+/* Message form */
+.vs-chat-form {
+  display: flex;
+  gap: var(--spacing-sm);
+}
+
+.vs-chat-input {
+  flex: 1;
+  padding: var(--spacing-sm) var(--spacing-md);
+  border: 1px solid var(--light-purple);
+  border-radius: 20px;
+  font-size: 14px;
+  background: white;
+  color: var(--text-dark);
+  resize: none;
+}
+
+.vs-chat-input:focus {
+  outline: none;
+  border-color: var(--dark-purple);
+}
+
+.vs-send-btn {
+  background: var(--primary-purple);
+  color: white;
+  border: none;
+  border-radius: 20px;
+  width: 60px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 2px 4px rgba(167, 139, 250, 0.3);
+}
+
+.vs-send-btn:hover {
+  background: var(--dark-purple);
+  transform: translateY(-1px);
+}
+
+/* Action buttons */
+.vs-actions {
+  display: flex;
+  gap: var(--spacing-sm);
+  margin-top: var(--spacing-md);
+}
+
+.vs-btn {
+  flex: 1;
+  padding: var(--spacing-sm);
+  border-radius: var(--border-radius-sm);
+  border: none;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+  font-size: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--spacing-xs);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+}
+
+.vs-btn-primary {
+  background: var(--primary-purple);
+  color: white;
+}
+
+.vs-btn-primary:hover {
+  background: var(--dark-purple);
+  transform: translateY(-1px);
+}
+
+.vs-btn-secondary {
+  background: var(--peach);
+  color: var(--text-dark);
+}
+
+.vs-btn-secondary:hover {
+  background: var(--dark-peach);
+  transform: translateY(-1px);
+}
+
+.vs-btn-neutral {
+  background: var(--light-beige);
+  color: var(--text-dark);
+}
+
+.vs-btn-neutral:hover {
+  background: var(--beige);
+  transform: translateY(-1px);
+}
+
+/* Footer */
+.vs-footer {
+  padding: var(--spacing-sm);
+  text-align: center;
+  font-size: 11px;
+  color: var(--text-muted);
+  border-top: 1px solid rgba(167, 139, 250, 0.2);
+  background: var(--light-beige);
+}
+
+/* Tabs */
+.vs-tabs {
+  display: flex;
+  margin-bottom: var(--spacing-md);
+  border-radius: var(--border-radius-sm);
+  overflow: hidden;
+  background: rgba(255, 255, 255, 0.5);
+  border: 1px solid rgba(167, 139, 250, 0.2);
+}
+
+.vs-tab {
+  flex: 1;
+  padding: var(--spacing-sm);
+  text-align: center;
+  cursor: pointer;
+  transition: all 0.2s;
+  font-size: 14px;
+  color: var(--text-muted);
+  position: relative;
+}
+
+.vs-tab.active {
+  background: white;
+  color: var(--dark-purple);
+  font-weight: 500;
+}
+
+.vs-tab.active::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 25%;
+  width: 50%;
+  height: 3px;
+  background: var(--primary-purple);
+  border-radius: 3px 3px 0 0;
+}
+
+.vs-tab-content {
+  display: none;
+  flex-direction: column;
+  flex: 1;
+  overflow: hidden;
+}
+
+.vs-tab-content.active {
+  display: flex;
+}
+
+/* Status indicator */
+.vs-status {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-sm);
+  margin-bottom: var(--spacing-md);
+  padding: var(--spacing-sm) var(--spacing-md);
+  border-radius: var(--border-radius-sm);
+  background: var(--light-beige);
+  font-size: 13px;
+}
+
+.vs-status-indicator {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+}
+
+.vs-status-indicator.connected {
+  background: #10b981;
+  box-shadow: 0 0 5px rgba(16, 185, 129, 0.5);
+}
+
+.vs-status-indicator.disconnected {
+  background: #ef4444;
+  box-shadow: 0 0 5px rgba(239, 68, 68, 0.5);
+}
+
+/* Empty state */
+.vs-empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: var(--spacing-lg);
+  text-align: center;
+  color: var(--text-muted);
+  height: 100%;
+}
+
+.vs-empty-icon {
+  font-size: 32px;
+  margin-bottom: var(--spacing-md);
+  opacity: 0.5;
+}
+
+/* Animations */
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.vs-overlay {
+  animation: fadeIn 0.3s ease-out;
+}
+
+/* For collapsed state */
+.vs-overlay.collapsed {
+  height: 48px !important;
+}
+
+.vs-overlay.collapsed .vs-content,
+.vs-overlay.collapsed .vs-footer {
+  display: none;
+}
+
+/* Custom scrollbar */
+.vs-chat-messages::-webkit-scrollbar {
+  width: 6px;
+}
+
+.vs-chat-messages::-webkit-scrollbar-track {
+  background: rgba(167, 139, 250, 0.1);
+  border-radius: 3px;
+}
+
+.vs-chat-messages::-webkit-scrollbar-thumb {
+  background: var(--light-purple);
+  border-radius: 3px;
+}
+
+.vs-chat-messages::-webkit-scrollbar-thumb:hover {
+  background: var(--primary-purple);
+}
+
+/* Notification */
+.vs-notification {
+  position: fixed;
+  top: 20px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: white;
+  border-radius: var(--border-radius);
+  padding: var(--spacing-md);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  z-index: 10000;
+  min-width: 250px;
+  text-align: center;
+  animation: fadeIn 0.3s ease-out;
+  border-left: 4px solid var(--primary-purple);
+}
+
+.vs-notification-title {
+  font-weight: 600;
+  margin-bottom: 4px;
+  color: var(--dark-purple);
+}
+
+.vs-notification-message {
+  color: var(--text-muted);
+  font-size: 14px;
+}
+
+/* Soft Theme - Light Purple, Beige, and Peach color scheme */
+/* These styles are designed to override any existing styles */
+
+/* Reset for our container to avoid conflicts */
+#video-sync-container.vs-overlay,
+#video-sync-container.vs-overlay * {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  line-height: normal;
+  text-align: left;
+  text-transform: none;
+}
+
+/* Color Variables */
+#video-sync-container.vs-overlay {
+  --vs-primary-purple: #a78bfa;
+  --vs-light-purple: #c4b5fd;
+  --vs-dark-purple: #8b5cf6;
+  --vs-beige: #f5f5dc;
+  --vs-light-beige: #faf7ed;
+  --vs-peach: #ffcba4;
+  --vs-dark-peach: #ffbb94;
+  --vs-text-dark: #4b3f72;
+  --vs-text-light: #faf7ed;
+  --vs-text-muted: #8a7faa;
+  --vs-bg-gradient: linear-gradient(135deg, #c4b5fd 0%, #ffcba4 100%);
+  --vs-shadow-color: rgba(167, 139, 250, 0.25);
+  --vs-border-radius: 16px;
+  --vs-border-radius-sm: 8px;
+  --vs-spacing-xs: 4px;
+  --vs-spacing-sm: 8px;
+  --vs-spacing-md: 16px;
+  --vs-spacing-lg: 24px;
+}
+
+/* Main overlay container */
+#video-sync-container.vs-overlay {
+  position: fixed !important;
+  bottom: 20px !important;
+  right: 20px !important;
+  width: 350px !important;
+  background: rgba(255, 255, 255, 0.85) !important;
+  backdrop-filter: blur(10px) !important;
+  -webkit-backdrop-filter: blur(10px) !important;
+  border-radius: var(--vs-border-radius) !important;
+  box-shadow: 0 10px 25px var(--vs-shadow-color) !important;
+  z-index: 9999 !important;
+  overflow: hidden !important;
+  border: 1px solid var(--vs-light-purple) !important;
+  transition: all 0.3s ease !important;
+  color: var(--vs-text-dark) !important;
+  display: flex !important;
+  flex-direction: column !important;
+}
+
+/* Header with gradient background */
+#video-sync-container .vs-header {
+  padding: var(--vs-spacing-md) !important;
+  background: var(--vs-bg-gradient) !important;
+  color: var(--vs-text-light) !important;
+  display: flex !important;
+  justify-content: space-between !important;
+  align-items: center !important;
+  cursor: move !important;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.2) !important;
+}
+
+#video-sync-container .vs-header-title {
+  display: flex !important;
+  align-items: center !important;
+  gap: var(--vs-spacing-sm) !important;
+  font-weight: 600 !important;
+  font-size: 16px !important;
+  color: white !important;
+}
+
+#video-sync-container .vs-header-controls {
+  display: flex !important;
+  gap: var(--vs-spacing-xs) !important;
+}
+
+/* Control buttons */
+#video-sync-container .vs-btn-icon {
+  width: 24px !important;
+  height: 24px !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  background: rgba(255, 255, 255, 0.2) !important;
+  border: none !important;
+  border-radius: 50% !important;
+  color: white !important;
+  cursor: pointer !important;
+  transition: background 0.2s !important;
+  font-size: 12px !important;
+}
+
+#video-sync-container .vs-btn-icon:hover {
+  background: rgba(255, 255, 255, 0.4) !important;
+}
+
+/* Main content container */
+#video-sync-container .vs-content {
+  padding: var(--vs-spacing-md) !important;
+  display: flex !important;
+  flex-direction: column !important;
+  flex: 1 !important;
+  overflow: hidden !important;
+}
+
+/* Room info with soft background */
+#video-sync-container .vs-room-info {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+  padding: var(--vs-spacing-sm) var(--vs-spacing-md) !important;
+  background: var(--vs-light-beige) !important;
+  border-radius: var(--vs-border-radius-sm) !important;
+  margin-bottom: var(--vs-spacing-md) !important;
+  border: 1px solid rgba(167, 139, 250, 0.2) !important;
+}
+
+#video-sync-container .vs-room-id {
+  font-weight: 600 !important;
+  color: var(--vs-dark-purple) !important;
+}
+
+#video-sync-container .vs-member-count {
+  background: var(--vs-light-purple) !important;
+  color: white !important;
+  padding: 2px var(--vs-spacing-sm) !important;
+  border-radius: 12px !important;
+  font-size: 12px !important;
+  display: flex !important;
+  align-items: center !important;
+  gap: 4px !important;
+}
+
+/* User profile area */
+#video-sync-container .vs-user-profile {
+  display: flex !important;
+  align-items: center !important;
+  gap: var(--vs-spacing-sm) !important;
+  margin-bottom: var(--vs-spacing-md) !important;
+  padding: var(--vs-spacing-sm) !important;
+  background: rgba(255, 255, 255, 0.5) !important;
+  border-radius: var(--vs-border-radius-sm) !important;
+  border: 1px solid rgba(167, 139, 250, 0.2) !important;
+}
+
+#video-sync-container .vs-avatar {
+  width: 32px !important;
+  height: 32px !important;
+  background: var(--vs-bg-gradient) !important;
+  border-radius: 50% !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  color: white !important;
+  font-weight: bold !important;
+}
+
+#video-sync-container .vs-username-input {
+  flex: 1 !important;
+  padding: var(--vs-spacing-sm) !important;
+  border: 1px solid var(--vs-light-purple) !important;
+  border-radius: var(--vs-border-radius-sm) !important;
+  font-size: 14px !important;
+  background: rgba(255, 255, 255, 0.8) !important;
+  color: var(--vs-text-dark) !important;
+}
+
+#video-sync-container .vs-username-input:focus {
+  outline: none !important;
+  border-color: var(--vs-dark-purple) !important;
+  box-shadow: 0 0 0 2px rgba(139, 92, 246, 0.2) !important;
+}
+
+/* Chat area */
+#video-sync-container .vs-chat-container {
+  display: flex !important;
+  flex-direction: column !important;
+  flex: 1 !important;
+  overflow: hidden !important;
+}
+
+#video-sync-container .vs-chat-messages {
+  flex: 1 !important;
+  padding: var(--vs-spacing-sm) !important;
+  overflow-y: auto !important;
+  background: white !important;
+  border-radius: var(--vs-border-radius-sm) !important;
+  margin-bottom: var(--vs-spacing-md) !important;
+  display: flex !important;
+  flex-direction: column !important;
+  gap: var(--vs-spacing-sm) !important;
+  min-height: 200px !important;
+  max-height: 300px !important;
+  border: 1px solid rgba(167, 139, 250, 0.2) !important;
+}
+
+/* Status indicator */
+#video-sync-container .vs-status {
+  display: flex !important;
+  align-items: center !important;
+  gap: var(--vs-spacing-sm) !important;
+  margin-bottom: var(--vs-spacing-md) !important;
+  padding: var(--vs-spacing-sm) var(--vs-spacing-md) !important;
+  border-radius: var(--vs-border-radius-sm) !important;
+  background: var(--vs-light-beige) !important;
+  font-size: 13px !important;
+}
+
+#video-sync-container .vs-status-indicator {
+  width: 10px !important;
+  height: 10px !important;
+  border-radius: 50% !important;
+}
+
+#video-sync-container .vs-status-indicator.connected {
+  background: #10b981 !important;
+  box-shadow: 0 0 5px rgba(16, 185, 129, 0.5) !important;
+}
+
+#video-sync-container .vs-status-indicator.disconnected {
+  background: #ef4444 !important;
+  box-shadow: 0 0 5px rgba(239, 68, 68, 0.5) !important;
+}
+
+/* Tabs */
+#video-sync-container .vs-tabs {
+  display: flex !important;
+  margin-bottom: var(--vs-spacing-md) !important;
+  border-radius: var(--vs-border-radius-sm) !important;
+  overflow: hidden !important;
+  background: rgba(255, 255, 255, 0.5) !important;
+  border: 1px solid rgba(167, 139, 250, 0.2) !important;
+}
+
+#video-sync-container .vs-tab {
+  flex: 1 !important;
+  padding: var(--vs-spacing-sm) !important;
+  text-align: center !important;
+  cursor: pointer !important;
+  transition: all 0.2s !important;
+  font-size: 14px !important;
+  color: var(--vs-text-muted) !important;
+  position: relative !important;
+}
+
+#video-sync-container .vs-tab.active {
+  background: white !important;
+  color: var(--vs-dark-purple) !important;
+  font-weight: 500 !important;
+}
+
+#video-sync-container .vs-tab.active::after {
+  content: '' !important;
+  position: absolute !important;
+  bottom: 0 !important;
+  left: 25% !important;
+  width: 50% !important;
+  height: 3px !important;
+  background: var(--vs-primary-purple) !important;
+  border-radius: 3px 3px 0 0 !important;
+}
+
+#video-sync-container .vs-tab-content {
+  display: none !important;
+  flex-direction: column !important;
+  flex: 1 !important;
+  overflow: hidden !important;
+}
+
+#video-sync-container .vs-tab-content.active {
+  display: flex !important;
+}
+
+/* Footer */
+#video-sync-container .vs-footer {
+  padding: var(--vs-spacing-sm) !important;
+  text-align: center !important;
+  font-size: 11px !important;
+  color: var(--vs-text-muted) !important;
+  border-top: 1px solid rgba(167, 139, 250, 0.2) !important;
+  background: var(--vs-light-beige) !important;
+}
+
+/* More CSS for chat messages, forms, etc. - just ensuring all use !important and proper scoping */
+
+/* Message styles */
+#video-sync-container .vs-message {
+  padding: var(--vs-spacing-sm) var(--vs-spacing-md) !important;
+  border-radius: var(--vs-border-radius-sm) !important;
+  max-width: 85% !important;
+  line-height: 1.4 !important;
+  position: relative !important;
+  font-size: 14px !important;
+}
+
+#video-sync-container .vs-message.received {
+  background: var(--vs-light-beige) !important;
+  border-radius: 0 var(--vs-border-radius-sm) var(--vs-border-radius-sm) var(--vs-border-radius-sm) !important;
+  align-self: flex-start !important;
+  color: var(--vs-text-dark) !important;
+}
+
+#video-sync-container .vs-message.sent {
+  background: var(--vs-light-purple) !important;
+  border-radius: var(--vs-border-radius-sm) 0 var(--vs-border-radius-sm) var(--vs-border-radius-sm) !important;
+  align-self: flex-end !important;
+  color: white !important;
+}
+
+#video-sync-container .vs-message.system {
+  background: rgba(167, 139, 250, 0.1) !important;
+  border-left: 3px solid var(--vs-primary-purple) !important;
+  color: var(--vs-text-muted) !important;
+  width: 90% !important;
+  align-self: center !important;
+  font-style: italic !important;
+  font-size: 13px !important;
+  padding: var(--vs-spacing-xs) var(--vs-spacing-md) !important;
+}
+
+#video-sync-container .vs-sender {
+  font-weight: 600 !important;
+  font-size: 13px !important;
+  margin-bottom: 2px !important;
+  color: var(--vs-dark-purple) !important;
+}
+
+#video-sync-container .vs-timestamp {
+  font-size: 10px !important;
+  opacity: 0.7 !important;
+  margin-top: 3px !important;
+  text-align: right !important;
+}
+
+/* Message form */
+#video-sync-container .vs-chat-form {
+  display: flex !important;
+  gap: var(--vs-spacing-sm) !important;
+}
+
+#video-sync-container .vs-chat-input {
+  flex: 1 !important;
+  padding: var(--vs-spacing-sm) var(--vs-spacing-md) !important;
+  border: 1px solid var(--vs-light-purple) !important;
+  border-radius: 20px !important;
+  font-size: 14px !important;
+  background: white !important;
+  color: var(--vs-text-dark) !important;
+  resize: none !important;
+}
+
+#video-sync-container .vs-chat-input:focus {
+  outline: none !important;
+  border-color: var(--vs-dark-purple) !important;
+}
+
+#video-sync-container .vs-send-btn {
+  background: var(--vs-primary-purple) !important;
+  color: white !important;
+  border: none !important;
+  border-radius: 20px !important;
+  width: 60px !important;
+  font-weight: 500 !important;
+  cursor: pointer !important;
+  transition: all 0.2s !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  box-shadow: 0 2px 4px rgba(167, 139, 250, 0.3) !important;
+}
+
+#video-sync-container .vs-send-btn:hover {
+  background: var(--vs-dark-purple) !important;
+  transform: translateY(-1px) !important;
+}
+
+/* For collapsed state */
+#video-sync-container.vs-overlay.collapsed {
+  height: 48px !important;
+}
+
+#video-sync-container.vs-overlay.collapsed .vs-content,
+#video-sync-container.vs-overlay.collapsed .vs-footer {
+  display: none !important;
+}
