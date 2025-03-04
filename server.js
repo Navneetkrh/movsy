@@ -1,295 +1,269 @@
+const WebSocket = require('ws');
 const express = require('express');
 const http = require('http');
-const WebSocket = require('ws');
 const cors = require('cors');
 
-// Create HTTP server
 const app = express();
-const server = http.createServer(app);
+app.use(cors());
 
-// Configure CORS for HTTP endpoints
-app.use(cors({
-  origin: '*',
-  methods: ['GET', 'POST', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization']
-}));
+// Create HTTP server
+const server = http.createServer(app);
 
 // Create WebSocket server
 const wss = new WebSocket.Server({ server });
 
-// Room storage
+// Store rooms and connected clients
 const rooms = new Map();
+const clients = new Map();
 
-// Track connections
-let connectionCount = 0;
-
-// HTTP endpoints
+// Health endpoint
 app.get('/health', (req, res) => {
-  console.log(`✅ Health check from ${req.ip}`);
-  res.json({ status: 'healthy', rooms: rooms.size, connections: connectionCount });
+  res.json({
+    status: 'ok',
+    rooms: rooms.size,
+    connections: clients.size
+  });
 });
 
-app.get('/', (req, res) => {
-  res.json({ status: 'Video Sync Server', activeRooms: Array.from(rooms.keys()) });
-});
-
-// WebSocket connection handling
+// WebSocket connection handler
 wss.on('connection', (ws) => {
-  connectionCount++;
-  const clientId = `client-${connectionCount}`;
-  console.log(`🟢 New connection: ${clientId}`);
+  const clientId = generateId();
+  console.log(`Client connected: ${clientId}`);
   
-  let currentRoom = null;
+  // Store client info
+  clients.set(ws, {
+    id: clientId,
+    roomId: null,
+    username: `Guest_${clientId.substring(0, 5)}`
+  });
   
-  // Send welcome message
-  ws.send(JSON.stringify({ 
-    type: 'welcome', 
-    message: 'Connected to Video Sync Server',
-    clientId 
-  }));
-
+  // Handle incoming messages
   ws.on('message', (message) => {
     try {
       const data = JSON.parse(message);
-      console.log(`📥 Received from ${clientId}:`, data);
-
-      // Handle ping request
-      if (data.type === 'ping') {
-        ws.send(JSON.stringify({
-          type: 'pong',
-          timestamp: Date.now()
-        }));
-        return;
-      }
-
-      // Handle room joining
-      if (data.type === 'joinRoom') {
-        const roomId = data.roomId;
-        
-        // Leave previous room if any
-        if (currentRoom) {
-          const prevRoom = rooms.get(currentRoom);
-          if (prevRoom) {
-            prevRoom.members.delete(ws);
-            console.log(`👋 ${clientId} left room ${currentRoom}`);
-            
-            // Broadcast member update to room
-            broadcastToRoom(currentRoom, {
-              type: 'memberUpdate',
-              memberCount: prevRoom.members.size
-            }, ws);
-          }
-        }
-        
-        // Join new room
-        currentRoom = roomId;
-        if (!rooms.has(roomId)) {
-          rooms.set(roomId, { 
-            members: new Set(),
-            currentTime: 0,
-            paused: true,
-            messages: [], // Store recent messages
-            users: new Map() // Store user info
-          });
-          console.log(`🏠 Created new room: ${roomId}`);
-        }
-        
-        const room = rooms.get(roomId);
-        room.members.add(ws);
-        console.log(`🚪 ${clientId} joined room ${roomId}, total members: ${room.members.size}`);
-        
-        // Send current state to new member
-        ws.send(JSON.stringify({
-          type: 'roomState',
-          currentTime: room.currentTime,
-          paused: room.paused,
-          memberCount: room.members.size
-        }));
-        
-        // Broadcast to others
-        broadcastToRoom(roomId, {
-          type: 'memberUpdate',
-          memberCount: room.members.size
-        }, ws);
-        
-        // Store username
-        if (data.username) {
-          room.users.set(clientId, data.username);
-        }
-        
-        // Send welcome message to room
-        broadcastToRoom(roomId, {
-          type: 'chatMessage',
-          username: 'System',
-          text: `${data.username || 'A new user'} joined the room`,
-          isSystem: true,
-          timestamp: Date.now()
-        });
-        
-        // Send recent message history to new user
-        if (room.messages && room.messages.length > 0) {
-          ws.send(JSON.stringify({
-            type: 'chatHistory',
-            messages: room.messages.slice(-20) // Send last 20 messages
-          }));
-        }
-      }
-
-      // Handle video events
-      if (data.type === 'videoEvent' && currentRoom) {
-        const room = rooms.get(currentRoom);
-        if (!room) return;
-        
-        // Update room state
-        if (data.currentTime !== undefined) {
-          room.currentTime = data.currentTime;
-        }
-        
-        if (data.eventName === 'play') {
-          room.paused = false;
-        } else if (data.eventName === 'pause') {
-          room.paused = true;
-        }
-        
-        console.log(`📺 Video ${data.eventName} at ${data.currentTime?.toFixed(2) || 0} in room ${currentRoom}`);
-        
-        // Broadcast to others
-        broadcastToRoom(currentRoom, {
-          type: 'videoCommand',
-          eventName: data.eventName,
-          currentTime: data.currentTime,
-          sender: clientId
-        }, ws);
-      }
-      
-      // Handle sync request
-      if (data.type === 'requestSync' && currentRoom) {
-        const room = rooms.get(currentRoom);
-        if (!room) return;
-        
-        ws.send(JSON.stringify({
-          type: 'syncState',
-          currentTime: room.currentTime,
-          paused: room.paused
-        }));
-      }
-      
-      // Handle chat messages
-      if (data.type === 'chatMessage') {
-        const room = rooms.get(currentRoom);
-        if (!room) return;
-        
-        const messageData = {
-          type: 'chatMessage',
-          username: data.username || 'Anonymous',
-          text: data.text,
-          timestamp: Date.now()
-        };
-        
-        // Store recent messages (keep last 50)
-        room.messages.push(messageData);
-        if (room.messages.length > 50) {
-          room.messages.shift();
-        }
-        
-        console.log(`💬 [Room ${currentRoom}] ${data.username}: ${data.text}`);
-        
-        // Broadcast to all room members
-        broadcastToRoom(currentRoom, messageData);
-      }
-      
-      // Handle username updates
-      if (data.type === 'updateUsername') {
-        const room = rooms.get(currentRoom);
-        if (!room) return;
-        
-        const oldUsername = room.users.get(clientId) || 'Anonymous';
-        room.users.set(clientId, data.username);
-        
-        console.log(`👤 [Room ${currentRoom}] ${oldUsername} changed name to ${data.username}`);
-        
-        // Notify room about username change
-        broadcastToRoom(currentRoom, {
-          type: 'chatMessage',
-          username: 'System',
-          text: `${oldUsername} is now known as ${data.username}`,
-          isSystem: true,
-          timestamp: Date.now()
-        });
-      }
-      
+      handleMessage(ws, data);
     } catch (err) {
-      console.error(`❌ Error processing message from ${clientId}:`, err);
+      console.error('Error parsing message:', err);
     }
   });
   
+  // Handle disconnection
   ws.on('close', () => {
-    console.log(`🔴 Connection closed: ${clientId}`);
-    connectionCount--;
+    const client = clients.get(ws);
+    console.log(`Client disconnected: ${client?.id || 'unknown'}`);
     
-    // Remove from room
-    if (currentRoom) {
-      const room = rooms.get(currentRoom);
-      if (room) {
-        room.members.delete(ws);
-        console.log(`👋 ${clientId} left room ${currentRoom}, remaining: ${room.members.size}`);
-        
-        // Delete empty rooms
-        if (room.members.size === 0) {
-          rooms.delete(currentRoom);
-          console.log(`🧹 Deleted empty room ${currentRoom}`);
-        } else {
-          // Notify remaining members
-          broadcastToRoom(currentRoom, {
-            type: 'memberUpdate',
-            memberCount: room.members.size
-          });
-          
-          const username = room?.users?.get(clientId) || 'A user';
-          
-          // Notify room members about user leaving
-          if (currentRoom && rooms.has(currentRoom) && room.members.size > 0) {
-            broadcastToRoom(currentRoom, {
-              type: 'chatMessage',
-              username: 'System',
-              text: `${username} left the room`,
-              isSystem: true,
-              timestamp: Date.now()
-            });
-          }
-        }
-      }
+    // Remove from room if in one
+    if (client && client.roomId) {
+      leaveRoom(ws, client.roomId);
     }
+    
+    // Remove client
+    clients.delete(ws);
   });
+  
+  // Send initial connection confirmation
+  ws.send(JSON.stringify({
+    type: 'connected',
+    clientId: clientId
+  }));
 });
 
-// Helper function to broadcast to room
-function broadcastToRoom(roomId, data, exclude = null) {
-  const room = rooms.get(roomId);
-  if (!room) return;
+// Handle incoming messages
+function handleMessage(ws, message) {
+  const client = clients.get(ws);
+  if (!client) return;
   
-  const message = JSON.stringify(data);
-  room.members.forEach(client => {
-    if (client !== exclude && client.readyState === WebSocket.OPEN) {
-      client.send(message);
+  console.log(`Received message type: ${message.type} from client: ${client.id}`);
+  
+  switch (message.type) {
+    case 'joinRoom':
+      joinRoom(ws, message.roomId, message.username);
+      break;
+    
+    case 'leaveRoom':
+      leaveRoom(ws, client.roomId);
+      break;
+    
+    case 'updateUsername':
+      updateUsername(ws, message.username);
+      break;
+    
+    case 'videoEvent':
+      broadcastToRoom(client.roomId, {
+        type: 'videoCommand',
+        eventName: message.eventName,
+        currentTime: message.currentTime,
+        senderId: client.id
+      }, ws); // Exclude sender
+      break;
+    
+    case 'chatMessage':
+      // Add timestamp if not present
+      if (!message.timestamp) {
+        message.timestamp = Date.now();
+      }
+      
+      broadcastToRoom(client.roomId, {
+        type: 'chatMessage',
+        username: client.username,
+        text: message.text,
+        timestamp: message.timestamp
+      });
+      break;
+    
+    case 'requestSync':
+      requestSync(ws, client.roomId);
+      break;
+      
+    case 'ping':
+      ws.send(JSON.stringify({ type: 'pong' }));
+      break;
+  }
+}
+
+// Join a room
+function joinRoom(ws, roomId, username) {
+  const client = clients.get(ws);
+  if (!client) return;
+  
+  // Update username if provided
+  if (username) {
+    client.username = username;
+  }
+  
+  // Leave current room if in one
+  if (client.roomId && client.roomId !== roomId) {
+    leaveRoom(ws, client.roomId);
+  }
+  
+  // Create room if it doesn't exist
+  if (!rooms.has(roomId)) {
+    rooms.set(roomId, new Set());
+  }
+  
+  // Add client to room
+  const room = rooms.get(roomId);
+  room.add(ws);
+  
+  // Update client's room
+  client.roomId = roomId;
+  
+  console.log(`Client ${client.id} joined room ${roomId} | Current members: ${room.size}`);
+  
+  // Notify client
+  ws.send(JSON.stringify({
+    type: 'roomJoined',
+    roomId: roomId
+  }));
+  
+  // Notify all clients in the room about the new member
+  broadcastToRoom(roomId, {
+    type: 'chatMessage',
+    isSystem: true,
+    text: `${client.username} joined the room`
+  });
+  
+  // Send member count update
+  broadcastToRoom(roomId, {
+    type: 'memberUpdate',
+    memberCount: room.size
+  });
+}
+
+// Leave a room
+function leaveRoom(ws, roomId) {
+  if (!roomId || !rooms.has(roomId)) return;
+  
+  const client = clients.get(ws);
+  if (!client) return;
+  
+  const room = rooms.get(roomId);
+  
+  // Remove client from room
+  room.delete(ws);
+  
+  console.log(`Client ${client.id} left room ${roomId} | Current members: ${room.size}`);
+  
+  // Delete room if empty
+  if (room.size === 0) {
+    rooms.delete(roomId);
+    console.log(`Room ${roomId} deleted`);
+  } else {
+    // Notify others in the room
+    broadcastToRoom(roomId, {
+      type: 'chatMessage',
+      isSystem: true,
+      text: `${client.username} left the room`
+    });
+    
+    // Send member count update
+    broadcastToRoom(roomId, {
+      type: 'memberUpdate',
+      memberCount: room.size
+    });
+  }
+  
+  // Clear client's room reference
+  client.roomId = null;
+}
+
+// Update username
+function updateUsername(ws, username) {
+  const client = clients.get(ws);
+  if (!client || !username) return;
+  
+  const oldUsername = client.username;
+  client.username = username;
+  
+  // Notify room of name change if in a room
+  if (client.roomId && rooms.has(client.roomId)) {
+    broadcastToRoom(client.roomId, {
+      type: 'chatMessage',
+      isSystem: true,
+      text: `${oldUsername} is now known as ${username}`
+    });
+  }
+}
+
+// Request sync state from a room
+function requestSync(ws, roomId) {
+  if (!roomId || !rooms.has(roomId)) return;
+  
+  const room = rooms.get(roomId);
+  
+  // Find a client to provide the sync state (first one that's not the requester)
+  for (const clientWs of room) {
+    if (clientWs !== ws) {
+      clientWs.send(JSON.stringify({
+        type: 'syncRequest',
+        requesterId: clients.get(ws).id
+      }));
+      break;
+    }
+  }
+}
+
+// Broadcast message to all clients in a room
+function broadcastToRoom(roomId, message, exclude = null) {
+  if (!roomId || !rooms.has(roomId)) return;
+  
+  const room = rooms.get(roomId);
+  
+  room.forEach((clientWs) => {
+    if (clientWs !== exclude && clientWs.readyState === WebSocket.OPEN) {
+      clientWs.send(JSON.stringify(message));
     }
   });
 }
 
-// Log room status periodically
-setInterval(() => {
-  console.log(`\n📊 Server Status: ${new Date().toLocaleTimeString()}`);
-  console.log(`Active rooms: ${rooms.size}`);
-  console.log(`Active connections: ${connectionCount}`);
-  
-  rooms.forEach((room, id) => {
-    console.log(`Room ${id}: ${room.members.size} members, time: ${room.currentTime.toFixed(2)}s`);
-  });
-  console.log('------------------------');
-}, 30000);
+// Generate unique ID
+function generateId() {
+  return Math.random().toString(36).substring(2, 10) + 
+         Date.now().toString(36);
+}
 
 // Start server
 const PORT = process.env.PORT || 3000;
 server.listen(PORT, () => {
-  console.log(`🚀 Server running on port ${PORT}`);
+  console.log(`Video Sync server running on port ${PORT}`);
 });
