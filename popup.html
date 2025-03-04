@@ -1,190 +1,286 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>Video Sync</title>
-  <script src="https://cdn.tailwindcss.com"></script>
-  <script>
-    tailwind.config = {
-      theme: {
-        extend: {
-          colors: {
-            'apple-dark': '#1c1c1e',
-            'apple-darker': '#121214',
-          },
-          boxShadow: {
-            'glow-green': '0 0 5px rgba(52, 211, 153, 0.5)',
-            'glow-red': '0 0 5px rgba(239, 68, 68, 0.5)',
-          }
-        }
-      }
-    }
-  </script>
+  <meta charset="UTF-8">
+  <title>Video Sync Pro</title>
   <style>
     :root {
-      --primary-color: #06c;
-      --accent-color: #34c759;
-      --danger-color: #ff3b30;
-      --warning-color: #ffcc00;
-      --text-color: #ffffff;
-      --text-secondary: rgba(255, 255, 255, 0.7);
-      --bg-dark: #1c1c1e;
-      --bg-card: rgba(44, 44, 46, 0.8);
-      --border-color: rgba(255, 255, 255, 0.15);
-      --shadow-color: rgba(0, 0, 0, 0.5);
-      --header-bg: linear-gradient(to right, #34c759, #32d74b);
+      /* Modern Apple-inspired color palette */
+      --primary-color: rgba(255, 179, 186, 0.95); /* Soft Peach */
+      --primary-dark: rgba(255, 143, 152, 0.95); /* Darker Peach */
+      --accent-color: rgba(200, 162, 200, 0.95); /* Vibrant Purple */
+      --accent-light: rgba(245, 234, 220, 0.95); /* Beige */
+      --blue-color: rgba(173, 216, 230, 0.95); /* Light Sky Blue */
+      --green-color: rgba(144, 238, 144, 0.95); /* Light Green */
+      --yellow-color: rgba(255, 255, 224, 0.95); /* Light Yellow */
+      --glow-effect: 0 0 30px rgba(255, 229, 180, 0.35);
+      --gradient-primary: linear-gradient(135deg, var(--primary-color), var(--primary-dark));
+      --gradient-accent: linear-gradient(135deg, var(--accent-color), rgba(167, 139, 250, 0.95));
+      --text-primary: #1D1D1F; /* Darker gray for better contrast */
+      --text-secondary: rgba(29, 29, 31, 0.7);
+      --text-tertiary: rgba(29, 29, 31, 0.4);
+      --bg-primary: rgba(255, 255, 255, 0.98); /* More opaque white */
+      --bg-secondary: rgba(250, 248, 245, 0.95); /* Warm beige background */
+      --border-color: rgba(200, 162, 200, 0.3); /* Subtle light purple border */
+      --card-shadow: 0 8px 30px rgba(200, 162, 200, 0.25);
+      --button-shadow: 0 4px 16px rgba(200, 162, 200, 0.3);
+      --glow-effect: 0 0 30px rgba(255, 229, 180, 0.35);
+    }
+    
+    @font-face {
+      font-family: 'SF Pro Text';
+      src: local('SF Pro Text'), local('SFProText-Regular');
+      font-weight: normal;
+      font-style: normal;
+    }
+    
+    @font-face {
+      font-family: 'SF Pro Display';
+      src: local('SF Pro Display'), local('SFProDisplay-Regular');
+      font-weight: normal;
+      font-style: normal;
+    }
+    
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
     }
     
     body {
-      width: 320px;
-      font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Helvetica Neue", Arial, sans-serif;
-      background-color: var(--bg-dark);
-      color: var(--text-color);
-      margin: 0;
-      padding: 0;
+      width: 360px;
+      font-family: 'SF Pro Text', -apple-system, BlinkMacSystemFont, sans-serif;
+      background: linear-gradient(135deg, rgba(167, 139, 250, 0.1) 0%, rgba(255, 203, 164, 0.1) 100%);
+      color: var(--text-primary);
+      font-size: 14px;
+      line-height: 1.4;
+      letter-spacing: -0.01em;
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
     }
     
     .header {
-      background: var(--header-bg);
-      padding: 16px;
-      text-align: center;
-      font-size: 16px;
+      padding: 16px 20px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      position: relative;
+      background: linear-gradient(135deg, var(--primary-color), var(--primary-dark));
+      box-shadow: 0 2px 20px rgba(139, 92, 246, 0.2);
+      border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    }
+    
+    .header-title {
+      font-family: 'SF Pro Display', -apple-system, BlinkMacSystemFont, sans-serif;
+      font-size: 17px;
       font-weight: 600;
+      color: white;
+      text-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+    }
+    
+    .header-icon {
+      margin-right: 8px;
+      font-size: 20px;
+      filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.1));
     }
     
     .content {
-      padding: 16px;
+      padding: 20px;
+      background: var(--bg-primary);
+      backdrop-filter: blur(10px);
+      -webkit-backdrop-filter: blur(10px);
+      border: 1px solid var(--border-color);
+      border-radius: 20px;
+      margin: 15px;
     }
     
-    .status {
+    .status-card {
       display: flex;
       align-items: center;
-      padding: 12px;
-      margin-bottom: 16px;
-      border-radius: 10px;
-      background: var(--bg-card);
-      border-left: 4px solid;
-    }
-    
-    .status.connected {
-      border-color: var(--accent-color);
-    }
-    
-    .status.disconnected {
-      border-color: var(--danger-color);
+      padding: 16px;
+      margin-bottom: 20px;
+      border-radius: 16px;
+      background: linear-gradient(145deg, var(--bg-secondary), var(--bg-primary));
+      box-shadow: var(--card-shadow);
+      border: 1px solid var(--border-color);
+      backdrop-filter: blur(5px);
+      -webkit-backdrop-filter: blur(5px);
     }
     
     .status-indicator {
       width: 10px;
       height: 10px;
       border-radius: 50%;
-      margin-right: 10px;
+      margin-right: 12px;
+      position: relative;
     }
     
     .status-indicator.connected {
-      background-color: var(--accent-color);
-      box-shadow: 0 0 5px var(--accent-color);
+      background: linear-gradient(145deg, var(--green-color), #2FB344);
+      box-shadow: 0 0 15px rgba(52, 211, 153, 0.3);
     }
     
     .status-indicator.disconnected {
-      background-color: var(--danger-color);
-      box-shadow: 0 0 5px var(--danger-color);
+      background: linear-gradient(145deg, #F87171, #EF4444);
+      box-shadow: 0 0 15px rgba(248, 113, 113, 0.3);
     }
     
     .form-group {
-      margin-bottom: 16px;
+      margin-bottom: 20px;
     }
     
     label {
       display: block;
-      font-size: 12px;
+      margin-bottom: 8px;
       color: var(--text-secondary);
-      margin-bottom: 6px;
+      font-weight: 500;
     }
     
     input {
       width: 100%;
-      padding: 8px 10px;
-      font-size: 13px;
-      background: rgba(60, 60, 67, 0.25);
+      padding: 12px 16px;
+      font-size: 15px;
+      background: var(--bg-secondary);
       border: 1px solid var(--border-color);
-      border-radius: 8px;
-      color: var(--text-color);
-      box-sizing: border-box;
+      border-radius: 12px;
+      color: var(--text-primary);
       font-family: inherit;
+      transition: all 0.3s ease;
+      backdrop-filter: blur(5px);
+      -webkit-backdrop-filter: blur(5px);
+    }
+    
+    input:focus {
+      outline: none;
+      border-color: var(--primary-color);
+      box-shadow: 0 0 0 3px rgba(167, 139, 250, 0.2);
+    }
+    
+    .button-group {
+      display: grid;
+      gap: 12px;
     }
     
     button {
       width: 100%;
-      padding: 10px;
+      padding: 12px 16px;
       border: none;
-      border-radius: 8px;
-      margin: 8px 0;
-      font-size: 14px;
-      font-weight: 500;
+      border-radius: 12px;
+      font-size: 15px;
+      font-weight: 600;
       cursor: pointer;
-      transition: background-color 0.2s;
+      transition: all 0.3s ease;
       font-family: inherit;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      position: relative;
+      overflow: hidden;
     }
     
     .btn-primary {
-      background-color: var(--accent-color);
+      background: linear-gradient(135deg, var(--primary-color), var(--primary-dark));
       color: white;
+      box-shadow: var(--button-shadow);
     }
     
     .btn-primary:hover {
-      background-color: #28bd4c;
+      transform: translateY(-1px);
+      box-shadow: 0 4px 15px rgba(139, 92, 246, 0.3);
     }
     
     .btn-secondary {
-      background-color: var(--primary-color);
+      background: linear-gradient(135deg, var(--blue-color), #6366F1);
       color: white;
+      box-shadow: var(--button-shadow);
     }
     
     .btn-secondary:hover {
-      background-color: #0055b3;
+      transform: translateY(-1px);
+      box-shadow: 0 4px 15px rgba(99, 102, 241, 0.3);
     }
     
     .btn-neutral {
-      background-color: rgba(120, 120, 128, 0.3);
-      color: var(--text-color);
+      background: var(--bg-secondary);
+      color: var(--text-primary);
+      border: 1px solid var(--border-color);
+      backdrop-filter: blur(5px);
+      -webkit-backdrop-filter: blur(5px);
     }
     
     .btn-neutral:hover {
-      background-color: rgba(120, 120, 128, 0.4);
+      transform: translateY(-1px);
+      background: var(--bg-primary);
+      box-shadow: var(--button-shadow);
+    }
+    
+    .btn-icon {
+      margin-right: 8px;
+      font-size: 16px;
     }
     
     .footer {
-      padding: 12px;
+      padding: 16px;
       text-align: center;
-      font-size: 11px;
+      font-size: 12px;
       color: var(--text-secondary);
       border-top: 1px solid var(--border-color);
+      margin-top: 10px;
+      background: var(--bg-secondary);
+      backdrop-filter: blur(5px);
+      -webkit-backdrop-filter: blur(5px);
     }
+    
+    /* Refined animations */
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(10px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    
+    .content > * {
+      animation: fadeIn 0.3s ease-out forwards;
+    }
+    
+    .content > *:nth-child(1) { animation-delay: 0.05s; }
+    .content > *:nth-child(2) { animation-delay: 0.1s; }
+    .content > *:nth-child(3) { animation-delay: 0.15s; }
+    .content > *:nth-child(4) { animation-delay: 0.2s; }
   </style>
 </head>
 <body>
   <div class="header">
-    <span>✨ Video Sync</span>
+    <span class="header-icon">💜</span>
+    <span class="header-title">Video Sync Pro</span>
   </div>
   
   <div class="content">
-    <div id="connectionStatus" class="status disconnected">
+    <div id="connectionStatus" class="status-card">
       <div class="status-indicator disconnected"></div>
-      <span>Checking connection...</span>
+      <span class="status-text">Checking connection...</span>
     </div>
     
     <div class="form-group">
-      <label for="roomId">Current Room:</label>
+      <label for="roomId">Current Room</label>
       <input type="text" id="roomId" readonly>
     </div>
     
-    <button id="copyLink" class="btn-primary">Copy Sync Link</button>
-    <button id="createRoom" class="btn-secondary">Create New Room</button>
-    <button id="options" class="btn-neutral">Options</button>
+    <div class="button-group">
+      <button id="copyLink" class="btn-primary">
+        <span class="btn-icon">📋</span>Share
+      </button>
+      <button id="createRoom" class="btn-secondary">
+        <span class="btn-icon">✨</span>New
+      </button>
+      <button id="options" class="btn-neutral">
+        <span class="btn-icon">⚙️</span>Settings
+      </button>
+    </div>
   </div>
   
   <div class="footer">
-    Made by Navneet
+    Made with 💜 by Navneet
   </div>
   
   <script src="popup.js"></script>
