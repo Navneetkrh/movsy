@@ -130,15 +130,24 @@ function findVideoElement() {
     return document.querySelector('video.html5-main-video');
   }
   
-  // Netflix specific
-  // if (window.location.hostname.includes('netflix.com')) {
-  //   // Try multiple potential selectors for Netflix
-  //   return document.querySelector('video.VideoPlayer') || 
-  //          document.querySelector('video.nfp') || 
-  //          document.querySelector('#appMountPoint video') ||
-  //          document.querySelector('.watch-video video') ||
-  //          document.querySelector('video'); // Fallback to any video element
-  // }
+  
+    // Netflix specific
+  if (window.location.hostname.includes('netflix.com')) {
+    // Try Netflix player container first (more reliable)
+    const netflixPlayer = document.querySelector('.NFPlayer');
+    if (netflixPlayer) {
+      const video = netflixPlayer.querySelector('video');
+      if (video) return video;
+    }
+    
+    // Try alternate Netflix selectors
+    const videoPlayer = document.querySelector('.VideoContainer video');
+    if (videoPlayer) return videoPlayer;
+    console.log("alternate video selector used");
+    
+    // Fallback to any video element as last resort
+    return document.querySelector('video');
+  }
   
   // Disney+ specific
   if (window.location.hostname.includes('disneyplus.com')) {
