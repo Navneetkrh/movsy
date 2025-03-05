@@ -7,6 +7,7 @@ let currentRoom = null;
 let connected = false;
 let reconnectTimer = null;
 let chatHistory = new Map(); // Store chat messages by roomId
+let usernames = new Map(); // Track usernames by roomId
 
 // Initialize when the extension is installed or updated
 chrome.runtime.onInstalled.addListener(() => {
@@ -57,6 +58,12 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
       }
       
       currentRoom = message.roomId;
+      
+      // Store username persistently
+      if (message.username) {
+        chrome.storage.local.set({ 'videoSync_username': message.username });
+        usernames.set(message.username, true); // Track this username
+      }
       
       // Send join message to server
       if (socket && socket.readyState === WebSocket.OPEN) {
@@ -152,6 +159,21 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
         sendResponse({});
       } else {
         sendResponse({});
+      }
+      break;
+
+    case 'getSavedUsername':
+      chrome.storage.local.get(['videoSync_username'], (result) => {
+        sendResponse({ username: result.videoSync_username || null });
+      });
+      return true; // Keep callback alive for async response
+      
+    case 'setUsername':
+      if (message.username) {
+        chrome.storage.local.set({ 'videoSync_username': message.username }, () => {
+          sendResponse({ success: true });
+        });
+        return true; // Keep callback alive for async response
       }
       break;
   }
@@ -263,13 +285,13 @@ function handleServerMessage(message) {
       
     case 'chatMessage':
       // Store in chat history
-      if (currentRoom) {
-        if (!chatHistory.has(currentRoom)) {
-          chatHistory.set(currentRoom, []);
+      if (message.roomId) {
+        if (!chatHistory.has(message.roomId)) {
+          chatHistory.set(message.roomId, []);
         }
-        chatHistory.get(currentRoom).push(message);
+        chatHistory.get(message.roomId).push(message);
         
-        // Forward to tabs
+        // Forward to all tabs, not just current room tabs
         broadcastToTabs(message);
       }
       break;

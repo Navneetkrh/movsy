@@ -117,8 +117,20 @@ document.addEventListener('DOMContentLoaded', function() {
   
   // Setup username
   function setupUsername() {
-    usernameInput.value = username;
-    updateAvatarInitial();
+    // Load username from storage first, not from localStorage
+    chrome.storage.local.get(['videoSync_username'], (result) => {
+      if (result.videoSync_username) {
+        username = result.videoSync_username;
+        usernameInput.value = username;
+        updateAvatarInitial();
+      } else {
+        // If no saved username, generate a new one and save it
+        username = 'Guest_' + Math.floor(Math.random() * 1000);
+        usernameInput.value = username;
+        updateAvatarInitial();
+        chrome.storage.local.set({ 'videoSync_username': username });
+      }
+    });
   }
   
   // Update avatar with user's initial
@@ -172,6 +184,28 @@ document.addEventListener('DOMContentLoaded', function() {
         scrollChatToBottom();
       }
     });
+    
+    // Set up periodic refresh every 5 seconds
+    if (window.chatRefreshInterval) {
+      clearInterval(window.chatRefreshInterval);
+    }
+    
+    window.chatRefreshInterval = setInterval(() => {
+      if (currentRoomId) {
+        chrome.runtime.sendMessage({ type: 'getChatHistory', roomId: currentRoomId }, (response) => {
+          if (response && response.messages) {
+            // Only refresh if number of messages changed
+            if (response.messages.length !== chatMessages.children.length) {
+              chatMessages.innerHTML = ''; // Clear existing messages
+              response.messages.forEach(msg => {
+                addChatMessage(msg);
+              });
+              scrollChatToBottom();
+            }
+          }
+        });
+      }
+    }, 5000);
   }
   
   // Create a new room
@@ -296,7 +330,7 @@ document.addEventListener('DOMContentLoaded', function() {
     }
     
     username = newUsername;
-    localStorage.setItem('videoSync_username', username);
+    chrome.storage.local.set({ 'videoSync_username': username });
     updateAvatarInitial();
     
     // Update username on server if in a room
@@ -480,6 +514,13 @@ document.addEventListener('DOMContentLoaded', function() {
       if (memberCount) {
         memberCount.textContent = message.memberCount || 0;
       }
+    }
+  });
+  
+  // Stop refresh when popup closes
+  window.addEventListener('beforeunload', () => {
+    if (window.chatRefreshInterval) {
+      clearInterval(window.chatRefreshInterval);
     }
   });
 });

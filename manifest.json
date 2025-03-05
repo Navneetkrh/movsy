@@ -42,7 +42,7 @@
     "extension_pages": "script-src 'self'; object-src 'self'"
   },
   "web_accessible_resources": [{
-    "resources": ["netflix-injector.js", "testing-controls.js"],
-    "matches": ["*://*.netflix.com/*"]
+    "resources": ["netflix-injector.js", "testing-controls.js", "storage-helper.js"],
+    "matches": ["*://*.netflix.com/*", "<all_urls>"]
   }]
 }
