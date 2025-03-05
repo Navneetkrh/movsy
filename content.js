@@ -204,18 +204,45 @@ function joinRoom(id) {
           roomIdElement.textContent = roomId;
         }
         
-        // Request sync after successful join
+        // Request sync after successful join - with enhanced playback time sync
         setTimeout(() => {
+          // Request current playback position from other members
           chrome.runtime.sendMessage({
-            type: 'requestSync',
+            type: 'requestPlaybackStatus',
             roomId: roomId
-          }, syncResponse => {
-            if (syncResponse && syncResponse.currentTime !== undefined) {
+          }, playbackResponse => {
+            if (playbackResponse && playbackResponse.currentTime !== undefined) {
+              console.log('🔄 Syncing to current playback time:', playbackResponse.currentTime);
+              
+              // Get video element
               const video = findVideoElement();
               if (video) {
-                video.currentTime = syncResponse.currentTime;
-                console.log('⏱️ Synced video to:', syncResponse.currentTime);
+                // Set flag to ignore our own events
+                ignoreEvents = true;
+                
+                // Set video time and playback state
+                video.currentTime = playbackResponse.currentTime;
+                
+                // Match playback state (play if others are playing, pause otherwise)
+                if (playbackResponse.isPlaying) {
+                  video.play().catch(err => console.error('Error auto-playing video:', err));
+                } else {
+                  video.pause();
+                }
+                
+                // Reset flag after a delay
+                setTimeout(() => {
+                  ignoreEvents = false;
+                }, 1000);
               }
+            } else {
+              console.log('No playback status received or room is new');
+              
+              // Fallback to basic sync request
+              chrome.runtime.sendMessage({
+                type: 'requestSync',
+                roomId: roomId
+              });
             }
           });
           
@@ -239,6 +266,7 @@ function joinRoom(id) {
     });
   });
 }
+
 
 // Initialize video sync
 setupVideoSync();

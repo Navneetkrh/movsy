@@ -14,6 +14,9 @@ let serverUrl = 'ws://localhost:3000';
 // Store recent chat messages per room
 const chatHistory = new Map();
 
+// Store room playback states
+const roomPlaybackStates = {};
+
 // Initialize on extension load
 function initialize() {
   console.log('Video Sync background script initializing...');
@@ -303,6 +306,25 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   if (message.type === 'videoEvent') {
     const success = sendVideoEvent(message.eventName, message.currentTime);
     sendResponse({ success: success });
+
+    const roomId = getCurrentRoomId();
+    
+    if (!roomId) return;
+    
+    // Update stored playback state for the room
+    if (!roomPlaybackStates[roomId]) {
+      roomPlaybackStates[roomId] = {};
+    }
+    
+    roomPlaybackStates[roomId].currentTime = message.currentTime;
+    roomPlaybackStates[roomId].lastUpdated = Date.now();
+    
+    if (message.eventName === 'play') {
+      roomPlaybackStates[roomId].isPlaying = true;
+    } else if (message.eventName === 'pause') {
+      roomPlaybackStates[roomId].isPlaying = false;
+    }
+
     return true;
   }
   
@@ -396,7 +418,53 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     
     return true;
   }
+
+  // New message type to request current playback status
+  if (message.type === 'requestPlaybackStatus') {
+    const roomId = message.roomId || getCurrentRoomId();
+    
+    // Get current playback state for the room
+    const playbackState = roomPlaybackStates[roomId];
+    
+    if (playbackState) {
+      // If state is stale (older than 10 minutes), don't use it
+      const isFresh = (Date.now() - playbackState.lastUpdated) < 10 * 60 * 1000;
+      
+      if (isFresh) {
+        // Calculate time progress since last update if playing
+        let adjustedTime = playbackState.currentTime;
+        
+        if (playbackState.isPlaying) {
+          const secondsSinceUpdate = (Date.now() - playbackState.lastUpdated) / 1000;
+          adjustedTime += secondsSinceUpdate;
+        }
+        
+        sendResponse({
+          currentTime: adjustedTime,
+          isPlaying: playbackState.isPlaying
+        });
+        return true; // Keep the message channel open for async response
+      }
+    }
+    
+    // No valid playback state available
+    sendResponse({
+      success: false,
+      reason: 'No recent playback information available'
+    });
+    return true; // Keep the message channel open for async response
+  }
+
+  // Make sure to return true if you're planning to send an async response
+  return true;
 });
+
+// Helper function to get current room ID
+function getCurrentRoomId() {
+  // This should be your existing function that returns the current room ID
+  // If you don't have one, implement it based on your room management logic
+  return currentRoomId; // assuming currentRoomId is defined in your background script
+}
 
 // Initialize on load
 initialize();
