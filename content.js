@@ -6,32 +6,12 @@ let roomId = null;
 let isController = false;
 let ignoreEvents = false;
 let chatVisible = false;
-let username = null;
+let username =
+  localStorage.getItem('videoSync_username') ||
+  'Guest_' + Math.floor(Math.random() * 1000);
 let messageHistory = [];
 let isNetflix = false;
 let netflixInjected = false;
-
-// Initialize username from storage using message passing instead of direct storage access
-function initUsername() {
-  // Send message to background script to get the username
-  safeRuntimeCall(() => chrome.runtime.sendMessage({ type: 'getSavedUsername' }, (response) => {
-    if (response && response.username) {
-      username = response.username;
-    } else {
-      // Generate a random username only if we don't have one saved
-      username = 'Guest_' + Math.floor(Math.random() * 1000);
-      // Send message to background script to save the username
-      safeRuntimeCall(() => chrome.runtime.sendMessage({ 
-        type: 'setUsername',
-        username: username
-      }));
-    }
-    console.log('Using username:', username);
-  }));
-}
-
-// Call this immediately
-initUsername();
 
 // Helper function to safely make runtime API calls
 function safeRuntimeCall(apiCall) {
@@ -158,7 +138,53 @@ function setupVideoSync() {
   });
 
   // Listen for sync commands and chat messages
-  const messageListener = setupMessageListeners();
+  const messageListener = (message, sender, sendResponse) => {
+    if (message.type === 'videoControl') {
+      console.log('Received control command:', message);
+      ignoreEvents = true;
+      try {
+        if (isNetflix && netflixInjected) {
+          // Forward control to Netflix via postMessage.
+          window.postMessage({
+            source: 'movsy_extension',
+            action: message.action,
+            time: message.time,
+            playbackRate: 1.0
+          }, '*');
+        } else {
+          // Standard video element control (YouTube, etc.)
+          if (message.action === 'play') {
+            if (Math.abs(video.currentTime - message.time) > 0.5) {
+              video.currentTime = message.time;
+            }
+            video.play().catch(err => console.error('Error playing video:', err));
+          } else if (message.action === 'pause') {
+            video.currentTime = message.time;
+            video.pause();
+          } else if (message.action === 'seek') {
+            video.currentTime = message.time;
+          }
+        }
+      } catch (err) {
+        console.error('Error executing command:', err);
+      }
+      setTimeout(() => { ignoreEvents = false; }, 500);
+    }
+    if (message.type === 'serverConnectionStatus') {
+      connected = message.connected;
+      updateConnectionIndicator(connected);
+      console.log('Server connection status:', connected ? 'Connected' : 'Disconnected');
+    }
+    if (message.type === 'chatMessage') {
+      messageHistory.push(message);
+      if (chatVisible) {
+        addChatMessage(message);
+      }
+    }
+    if (message.type === 'memberUpdate') {
+      updateMemberCount(message.memberCount);
+    }
+  };
   
   try {
     chrome.runtime.onMessage.addListener(messageListener);
@@ -202,15 +228,13 @@ function findVideoElement() {
   return document.querySelector('video');
 }
 
-// Improved joinRoom function with better chat handling
+// Modified joinRoom: update URL hash with room ID and current time, then reload if needed.
 function joinRoom(id) {
   roomId = id;
-  
-  // If the URL hash does not match the roomId, update it and reload
+  // If the URL hash does not match the roomId, update it and reload.
   const currentHash = window.location.hash.slice(1);
   const video = findVideoElement();
   const currentTime = video ? Math.floor(video.currentTime) : 0;
-  
   if (!currentHash.startsWith(roomId)) {
     window.location.hash = roomId + '&t=' + currentTime;
     console.log('Room link generated, reloading page to sync state...');
@@ -220,59 +244,88 @@ function joinRoom(id) {
   
   console.log('🚪 Joining room:', roomId);
   
-  // Wait for username to be initialized before joining
-  const joinWithUsername = () => {
-    if (!username) {
-      console.log('Waiting for username initialization...');
-      setTimeout(joinWithUsername, 500);
+  safeRuntimeCall(() => chrome.runtime.sendMessage({ type: 'getConnectionStatus' }, (connectionResponse) => {
+    if (!connectionResponse || !connectionResponse.connected) {
+      console.log('⚠️ Server not connected, waiting before joining room...');
+      setTimeout(() => joinRoom(roomId), 3000);
       return;
     }
     
-    safeRuntimeCall(() => chrome.runtime.sendMessage({ type: 'getConnectionStatus' }, (connectionResponse) => {
-      if (!connectionResponse || !connectionResponse.connected) {
-        console.log('⚠️ Server not connected, waiting before joining room...');
-        setTimeout(() => joinRoom(roomId), 3000);
+    safeRuntimeCall(() => chrome.runtime.sendMessage({
+      type: 'joinRoom',
+      roomId: roomId,
+      username: username
+    }, (joinResponse) => {
+      const error = chrome.runtime.lastError;
+      if (error) {
+        console.error('❌ Error joining room:', error);
+        setTimeout(() => joinRoom(roomId), 5000);
         return;
       }
       
-      safeRuntimeCall(() => chrome.runtime.sendMessage({
-        type: 'joinRoom',
-        roomId: roomId,
-        username: username
-      }, (joinResponse) => {
-        const error = chrome.runtime.lastError;
-        if (error) {
-          console.error('❌ Error joining room:', error);
-          setTimeout(() => joinRoom(roomId), 5000);
-          return;
+      if (joinResponse && joinResponse.success) {
+        console.log('✅ Successfully joined room:', roomId);
+        addSystemMessage(`You joined room ${roomId}`);
+        const roomIdElement = document.getElementById('vs-room-id');
+        if (roomIdElement) {
+          roomIdElement.textContent = roomId;
         }
         
-        if (joinResponse && joinResponse.success) {
-          console.log('✅ Successfully joined room:', roomId);
-          addSystemMessage(`You joined room ${roomId}`);
+        // Request playback sync and chat history
+        setTimeout(() => {
+          safeRuntimeCall(() => chrome.runtime.sendMessage({
+            type: 'requestPlaybackStatus',
+            roomId: roomId
+          }, (playbackResponse) => {
+            if (playbackResponse && playbackResponse.currentTime !== undefined) {
+              console.log('🔄 Syncing to current playback time:', playbackResponse.currentTime);
+              const video = findVideoElement();
+              if (video) {
+                ignoreEvents = true;
+                if (isNetflix && netflixInjected) {
+                  window.postMessage({
+                    source: 'movsy_extension',
+                    action: playbackResponse.isPlaying ? 'play' : 'pause',
+                    time: playbackResponse.currentTime,
+                    playbackRate: 1.0
+                  }, '*');
+                } else {
+                  video.currentTime = playbackResponse.currentTime;
+                  if (playbackResponse.isPlaying) {
+                    video.play().catch(err => console.error('Error auto-playing video:', err));
+                  } else {
+                    video.pause();
+                  }
+                }
+                setTimeout(() => { ignoreEvents = false; }, 1000);
+              }
+            } else {
+              console.log('No playback status received or room is new');
+              chrome.runtime.sendMessage({
+                type: 'requestSync',
+                roomId: roomId
+              });
+            }
+          }));
           
-          // Create UI if needed, then update room ID display
-          createChatUI();
-          const roomIdElement = document.getElementById('vs-room-id');
-          if (roomIdElement) {
-            roomIdElement.textContent = roomId;
-          }
-          
-          // Show chat interface
-          toggleChatVisibility(true);
-          
-          // Request chat history
-          fetchChatHistory();
-        } else {
-          console.log('❌ Failed to join room:', joinResponse?.reason || 'unknown reason');
-          setTimeout(() => joinRoom(roomId), 5000);
-        }
-      }));
+          safeRuntimeCall(() => chrome.runtime.sendMessage({
+            type: 'getChatHistory',
+            roomId: roomId
+          }, (response) => {
+            if (response && response.messages) {
+              messageHistory = response.messages;
+              if (chatVisible) {
+                renderChatHistory();
+              }
+            }
+          }));
+        }, 1000);
+      } else {
+        console.log('❌ Failed to join room:', joinResponse?.reason || 'unknown reason');
+        setTimeout(() => joinRoom(roomId), 5000);
+      }
     }));
-  };
-  
-  // Start the join process
-  joinWithUsername();
+  }));
 }
 
 // Update connection indicator (if UI is present)
@@ -377,186 +430,3 @@ function pollForNetflix() {
     setTimeout(() => { clearInterval(checkNetflix); }, 30000);
   }
 }
-
-// Listen for sync commands and chat messages with better error handling
-function setupMessageListeners() {
-  const messageListener = (message, sender, sendResponse) => {
-    try {
-      // Video control commands
-      if (message.type === 'videoControl') {
-        // ...existing code for video control...
-        console.log('Received control command:', message);
-        ignoreEvents = true;
-        try {
-          if (isNetflix && netflixInjected) {
-            // Forward control to Netflix via postMessage.
-            window.postMessage({
-              source: 'movsy_extension',
-              action: message.action,
-              time: message.time,
-              playbackRate: 1.0
-            }, '*');
-          } else {
-            // Standard video element control (YouTube, etc.)
-            if (message.action === 'play') {
-              if (Math.abs(video.currentTime - message.time) > 0.5) {
-                video.currentTime = message.time;
-              }
-              video.play().catch(err => console.error('Error playing video:', err));
-            } else if (message.action === 'pause') {
-              video.currentTime = message.time;
-              video.pause();
-            } else if (message.action === 'seek') {
-              video.currentTime = message.time;
-            }
-          }
-        } catch (err) {
-          console.error('Error executing command:', err);
-        }
-        setTimeout(() => { ignoreEvents = false; }, 500);
-      }
-      
-      // Server connection status
-      if (message.type === 'serverConnectionStatus') {
-        connected = message.connected;
-        updateConnectionIndicator(connected);
-        console.log('Server connection status:', connected ? 'Connected' : 'Disconnected');
-      }
-      
-      // Handle chat messages - improved to check roomId
-      if (message.type === 'chatMessage') {
-        // Only process messages for our current room
-        if (message.roomId === roomId || !message.roomId) {
-          // Add to message history if not duplicate (check by timestamp)
-          const isDuplicate = messageHistory.some(msg => 
-            msg.timestamp === message.timestamp && 
-            msg.username === message.username && 
-            msg.text === message.text
-          );
-          
-          if (!isDuplicate) {
-            messageHistory.push(message);
-            if (chatVisible) {
-              addChatMessage(message);
-            }
-          }
-        }
-      }
-      
-      // Member updates
-      if (message.type === 'memberUpdate') {
-        updateMemberCount(message.memberCount);
-      }
-    } catch (err) {
-      console.error('Error handling message:', err);
-    }
-  };
-
-  // Add listener with proper error handling
-  try {
-    chrome.runtime.onMessage.addListener(messageListener);
-    
-    // Add listener removal on page unload
-    window.addEventListener('beforeunload', () => {
-      try {
-        chrome.runtime.onMessage.removeListener(messageListener);
-      } catch (e) {
-        // Ignore errors during cleanup
-      }
-    });
-  } catch (e) {
-    console.error('Failed to add message listener:', e);
-  }
-  
-  return messageListener;
-}
-
-// Fetch chat history specifically - separate function for better reusability
-function fetchChatHistory() {
-  if (!roomId) return;
-  
-  console.log('📜 Fetching chat history for room:', roomId);
-  safeRuntimeCall(() => chrome.runtime.sendMessage({
-    type: 'getChatHistory',
-    roomId: roomId
-  }, (response) => {
-    if (response && response.messages && response.messages.length > 0) {
-      console.log(`📨 Received ${response.messages.length} chat messages from history`);
-      
-      // Replace message history with new messages
-      messageHistory = response.messages;
-      
-      // Render in UI if visible
-      if (chatVisible) {
-        renderChatHistory();
-      }
-    } else {
-      console.log('No chat history available or room is new');
-    }
-  }));
-}
-
-// Create or show chat UI
-function createChatUI() {
-  if (document.getElementById('vs-chat-container')) {
-    return; // Already created
-  }
-  
-  // Create floating chat UI
-  const chatContainer = document.createElement('div');
-  chatContainer.id = 'vs-chat-container';
-  chatContainer.className = 'vs-chat-container';
-  
-  // Add chat header, messages area, input, etc.
-  // ...existing code for creating chat UI...
-  
-  document.body.appendChild(chatContainer);
-}
-
-// Toggle chat visibility
-function toggleChatVisibility(show) {
-  chatVisible = show !== undefined ? show : !chatVisible;
-  
-  const chatContainer = document.getElementById('vs-chat-container');
-  if (chatContainer) {
-    chatContainer.style.display = chatVisible ? 'block' : 'none';
-    
-    if (chatVisible) {
-      // Re-render messages when made visible
-      renderChatHistory();
-    }
-  }
-}
-
-// Initialize video sync
-function initializeSync() {
-  try {
-    // Setup message listeners first
-    setupMessageListeners();
-    
-    // Then setup video sync
-    setupVideoSync();
-    
-    // Create refresh button for chat
-    createRefreshButton();
-  } catch (e) {
-    console.error('Error setting up video sync:', e);
-  }
-}
-
-// Create a refresh button for chat
-function createRefreshButton() {
-  // Add a refresh button to get the latest messages
-  const chatHeader = document.querySelector('.vs-chat-header');
-  if (chatHeader) {
-    const refreshBtn = document.createElement('button');
-    refreshBtn.textContent = '🔄';
-    refreshBtn.className = 'vs-refresh-btn';
-    refreshBtn.title = 'Refresh chat messages';
-    refreshBtn.onclick = fetchChatHistory;
-    chatHeader.appendChild(refreshBtn);
-  }
-}
-
-// Start initialization
-initializeSync();
