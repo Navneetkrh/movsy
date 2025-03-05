@@ -131,14 +131,14 @@ function findVideoElement() {
   }
   
   // Netflix specific
-  if (window.location.hostname.includes('netflix.com')) {
-    // Try multiple potential selectors for Netflix
-    return document.querySelector('video.VideoPlayer') || 
-           document.querySelector('video.nfp') || 
-           document.querySelector('#appMountPoint video') ||
-           document.querySelector('.watch-video video') ||
-           document.querySelector('video'); // Fallback to any video element
-  }
+  // if (window.location.hostname.includes('netflix.com')) {
+  //   // Try multiple potential selectors for Netflix
+  //   return document.querySelector('video.VideoPlayer') || 
+  //          document.querySelector('video.nfp') || 
+  //          document.querySelector('#appMountPoint video') ||
+  //          document.querySelector('.watch-video video') ||
+  //          document.querySelector('video'); // Fallback to any video element
+  // }
   
   // Disney+ specific
   if (window.location.hostname.includes('disneyplus.com')) {
