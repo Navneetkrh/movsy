@@ -2,6 +2,7 @@ const WebSocket = require('ws');
 const express = require('express');
 const http = require('http');
 const cors = require('cors');
+const path = require('path');
 
 const app = express();
 app.use(cors());
@@ -25,6 +26,11 @@ app.get('/health', (req, res) => {
     rooms: rooms.size,
     connections: clients.size
   });
+});
+
+// Serve privacy page
+app.get('/privacy', (req, res) => {
+  res.sendFile(path.join(__dirname, 'privacy.html'));
 });
 
 // WebSocket connection handler

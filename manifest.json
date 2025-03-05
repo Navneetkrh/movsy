@@ -46,5 +46,5 @@
     "resources": ["netflix-injector.js", "testing-controls.js"],
     "matches": ["*://*.netflix.com/*"]
   }],
-  "privacy_policy_url": "https://yourdomain.com/privacy.html"
+  "privacy_policy_url": "https://movsy-production.up.railway.app/privacy"
 }
