@@ -2,7 +2,7 @@
 
 // Global variables
 let socket = null;
-let serverUrl = 'ws://localhost:3000';
+let serverUrl = 'ws://movsy-production.up.railway.app';
 let currentRoom = null;
 let connected = false;
 let reconnectTimer = null;
