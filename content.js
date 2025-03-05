@@ -139,17 +139,11 @@ function setupVideoSync() {
       // Execute command
       try {
         if (isNetflix && netflixInjected) {
-          // Use enhanced Netflix control with proper action typing
-          let netflixAction = message.action;
-          if (message.action === 'seeked') {
-            netflixAction = 'seek'; // Convert to 'seek' for the Netflix API
-          }
-          
+          // Use Netflix injected controller
           window.postMessage({
             source: 'movsy_extension',
-            action: netflixAction,
+            action: message.action,
             time: message.time,
-            isPlaying: message.action !== 'pause', // Maintain playing state for seeks
             playbackRate: 1.0
           }, '*');
         } else {
@@ -299,9 +293,8 @@ function joinRoom(id) {
                 if (isNetflix && netflixInjected) {
                   window.postMessage({
                     source: 'movsy_extension',
-                    action: 'syncStatus', // Use new comprehensive sync command
+                    action: playbackResponse.isPlaying ? 'play' : 'pause',
                     time: playbackResponse.currentTime,
-                    isPlaying: playbackResponse.isPlaying,
                     playbackRate: 1.0
                   }, '*');
                 } else {
