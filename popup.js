@@ -196,6 +196,18 @@ document.addEventListener('DOMContentLoaded', function() {
         chatRoomId.textContent = `Room: ${roomId}`;
         showChatInterface(true);
         
+        // Update the URL of the current page
+        chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
+          if (tabs.length === 0) {
+            console.error('No active tab found');
+            return;
+          }
+          
+          const currentUrl = new URL(tabs[0].url);
+          currentUrl.hash = roomId;
+          chrome.tabs.update(tabs[0].id, { url: currentUrl.toString() });
+        });
+        
         // Notify user
         showNotification('Room created!', 'Click "Copy Sync Link" to share');
       } else {
