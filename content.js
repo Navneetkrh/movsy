@@ -116,13 +116,13 @@ function setupVideoSync() {
     });
   });
   
-  video.addEventListener('seeked', () => {
+  video.addEventListener('seek', () => {
     if (ignoreEvents) return;
     
-    console.log('Video seeked to:', video.currentTime);
+    console.log('Video seek to:', video.currentTime);
     chrome.runtime.sendMessage({
       type: 'videoEvent',
-      eventName: 'seeked',
+      eventName: 'seek',
       currentTime: video.currentTime
     });
   });
@@ -158,7 +158,7 @@ function setupVideoSync() {
           } else if (message.action === 'pause') {
             video.currentTime = message.time;
             video.pause();
-          } else if (message.action === 'seeked') {
+          } else if (message.action === 'seek') {
             video.currentTime = message.time;
           }
         }
