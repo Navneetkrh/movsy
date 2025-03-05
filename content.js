@@ -13,6 +13,9 @@ let messageHistory = [];
 let isNetflix = false;
 let netflixInjected = false;
 
+// Only activate full functionality when actually in a room
+let syncActive = false;
+
 // Helper function to safely make runtime API calls
 function safeRuntimeCall(apiCall) {
   try {
@@ -28,23 +31,33 @@ function safeRuntimeCall(apiCall) {
   }
 }
 
-// Test mode initialization – loads testing-controls.js if needed
-function initTestMode() {
-  console.log('Initializing test mode');
-  const script = document.createElement('script');
-  script.src = chrome.runtime.getURL('testing-controls.js');
-  document.head.appendChild(script);
+// Only activate sync if there's a valid room ID in the URL
+function shouldActivateSync() {
+  if (window.location.hash) {
+    const hash = window.location.hash.slice(1);
+    // Make sure it's a valid room ID format (not just any hash)
+    if (hash.startsWith('room_') || hash.match(/^[a-zA-Z0-9_-]{4,}$/)) {
+      console.log('Found valid room ID in URL, activating sync');
+      return true;
+    }
+  }
+  console.log('No valid room ID found, running in passive mode');
+  return false;
 }
 
 // If a room link exists in the URL hash, use it
 if (window.location.hash) {
-  // Expect roomId[&t=timestamp]
   const hash = window.location.hash.slice(1);
   const parts = hash.split('&t=');
-  roomId = parts[0];
-  console.log('Found room ID in URL:', roomId);
-  // Optionally, you could use the "t" parameter to immediately set currentTime.
-  joinRoom(roomId);
+  const potentialRoomId = parts[0];
+  
+  // Only activate if it looks like a room ID
+  if (potentialRoomId.startsWith('room_') || potentialRoomId.match(/^[a-zA-Z0-9_-]{4,}$/)) {
+    roomId = potentialRoomId;
+    console.log('Found room ID in URL:', roomId);
+    syncActive = true;
+    joinRoom(roomId);
+  }
 }
 
 // Check if we're on Netflix and inject the controller if needed
@@ -84,109 +97,137 @@ function injectNetflixController() {
   }
 }
 
-// Main video sync functionality
+// Main video sync functionality - modified to be dormant when not in a room
 function setupVideoSync() {
-  checkForNetflix();
+  // Only do Netflix checks if sync is active or we're on Netflix
+  if (syncActive || window.location.hostname.includes('netflix.com')) {
+    checkForNetflix();
+  }
+  
   const video = findVideoElement();
   if (!video) {
-    console.log('No video element found, retrying in 2 seconds');
-    setTimeout(setupVideoSync, 2000);
+    if (syncActive) {
+      console.log('No video element found, retrying in 2 seconds');
+      setTimeout(setupVideoSync, 2000);
+    }
     return;
   }
-  console.log('Found video element, setting up sync');
+  
+  if (syncActive) {
+    console.log('Found video element, setting up active sync');
 
-  // If URL hash contains "test", initialize test mode.
-  if (window.location.hash.includes('test')) {
-    initTestMode();
+    // If URL hash contains "test", initialize test mode.
+    if (window.location.hash.includes('test')) {
+      initTestMode();
+    }
+
+    // Listen for local video events only when sync is active
+    video.addEventListener('play', () => {
+      if (!syncActive || ignoreEvents) return;
+      console.log('Video played at:', video.currentTime);
+      safeRuntimeCall(() => 
+        chrome.runtime.sendMessage({
+          type: 'videoEvent',
+          eventName: 'play',
+          currentTime: video.currentTime
+        })
+      );
+    });
+    
+    video.addEventListener('pause', () => {
+      if (!syncActive || ignoreEvents) return;
+      console.log('Video paused at:', video.currentTime);
+      safeRuntimeCall(() => 
+        chrome.runtime.sendMessage({
+          type: 'videoEvent',
+          eventName: 'pause',
+          currentTime: video.currentTime
+        })
+      );
+    });
+    
+    video.addEventListener('seeked', () => {
+      if (!syncActive || ignoreEvents) return;
+      console.log('Video seeked to:', video.currentTime);
+      safeRuntimeCall(() => 
+        chrome.runtime.sendMessage({
+          type: 'videoEvent',
+          eventName: 'seek',
+          currentTime: video.currentTime
+        })
+      );
+    });
+  } else {
+    console.log('Video found but sync not active - monitoring for room links only');
   }
 
-  // Listen for local video events (using "seeked" for seeking)
-  video.addEventListener('play', () => {
-    if (ignoreEvents) return;
-    console.log('Video played at:', video.currentTime);
-    safeRuntimeCall(() => 
-      chrome.runtime.sendMessage({
-        type: 'videoEvent',
-        eventName: 'play',
-        currentTime: video.currentTime
-      })
-    );
-  });
-  
-  video.addEventListener('pause', () => {
-    if (ignoreEvents) return;
-    console.log('Video paused at:', video.currentTime);
-    safeRuntimeCall(() => 
-      chrome.runtime.sendMessage({
-        type: 'videoEvent',
-        eventName: 'pause',
-        currentTime: video.currentTime
-      })
-    );
-  });
-  
-  video.addEventListener('seeked', () => {
-    if (ignoreEvents) return;
-    console.log('Video seeked to:', video.currentTime);
-    safeRuntimeCall(() => 
-      chrome.runtime.sendMessage({
-        type: 'videoEvent',
-        eventName: 'seek',
-        currentTime: video.currentTime
-      })
-    );
-  });
-
-  // Listen for sync commands and chat messages
-  const messageListener = (message, sender, sendResponse) => {
-    if (message.type === 'videoControl') {
-      console.log('Received control command:', message);
-      ignoreEvents = true;
-      try {
-        if (isNetflix && netflixInjected) {
-          // Forward control to Netflix via postMessage.
-          window.postMessage({
-            source: 'movsy_extension',
-            action: message.action,
-            time: message.time,
-            playbackRate: 1.0
-          }, '*');
-        } else {
-          // Standard video element control (YouTube, etc.)
-          if (message.action === 'play') {
-            if (Math.abs(video.currentTime - message.time) > 0.5) {
+  // Always listen for messages - to handle room joining via popup
+  try {
+    const messageListener = (message, sender, sendResponse) => {
+      // Only process video control messages when sync is active
+      if (message.type === 'videoControl' && syncActive) {
+        console.log('Received control command:', message);
+        ignoreEvents = true;
+        try {
+          if (isNetflix && netflixInjected) {
+            // Forward control to Netflix via postMessage.
+            window.postMessage({
+              source: 'movsy_extension',
+              action: message.action,
+              time: message.time,
+              playbackRate: 1.0
+            }, '*');
+          } else {
+            // Standard video element control (YouTube, etc.)
+            if (message.action === 'play') {
+              if (Math.abs(video.currentTime - message.time) > 0.5) {
+                video.currentTime = message.time;
+              }
+              video.play().catch(err => console.error('Error playing video:', err));
+            } else if (message.action === 'pause') {
+              video.currentTime = message.time;
+              video.pause();
+            } else if (message.action === 'seek') {
               video.currentTime = message.time;
             }
-            video.play().catch(err => console.error('Error playing video:', err));
-          } else if (message.action === 'pause') {
-            video.currentTime = message.time;
-            video.pause();
-          } else if (message.action === 'seek') {
-            video.currentTime = message.time;
+          }
+        } catch (err) {
+          console.error('Error executing command:', err);
+        }
+        setTimeout(() => { ignoreEvents = false; }, 500);
+      }
+      
+      // Always process connection status for UI purposes
+      if (message.type === 'serverConnectionStatus') {
+        connected = message.connected;
+        if (syncActive) {
+          updateConnectionIndicator(connected);
+        }
+        console.log('Server connection status:', connected ? 'Connected' : 'Disconnected');
+      }
+      
+      // Process these messages only when in a room
+      if (syncActive) {
+        if (message.type === 'chatMessage') {
+          messageHistory.push(message);
+          if (chatVisible) {
+            addChatMessage(message);
           }
         }
-      } catch (err) {
-        console.error('Error executing command:', err);
+        if (message.type === 'memberUpdate') {
+          updateMemberCount(message.memberCount);
+        }
       }
-      setTimeout(() => { ignoreEvents = false; }, 500);
-    }
-    if (message.type === 'serverConnectionStatus') {
-      connected = message.connected;
-      updateConnectionIndicator(connected);
-      console.log('Server connection status:', connected ? 'Connected' : 'Disconnected');
-    }
-    if (message.type === 'chatMessage') {
-      messageHistory.push(message);
-      if (chatVisible) {
-        addChatMessage(message);
+      
+      // Handle room join commands from popup
+      if (message.type === 'joinRoomFromPopup' && message.roomId) {
+        syncActive = true;
+        roomId = message.roomId;
+        joinRoom(roomId);
+        return true;
       }
-    }
-    if (message.type === 'memberUpdate') {
-      updateMemberCount(message.memberCount);
-    }
-  };
-  
-  try {
+    };
+    
     chrome.runtime.onMessage.addListener(messageListener);
     
     // Add listener removal on page unload
@@ -228,14 +269,16 @@ function findVideoElement() {
   return document.querySelector('video');
 }
 
-// Modified joinRoom: update URL hash with room ID and current time, then reload if needed.
+// Modified joinRoom function to update URL and set syncActive
 function joinRoom(id) {
   roomId = id;
-  // If the URL hash does not match the roomId, update it and reload.
+  syncActive = true;
+  
+  // Update URL if needed
   const currentHash = window.location.hash.slice(1);
-  const video = findVideoElement();
-  const currentTime = video ? Math.floor(video.currentTime) : 0;
   if (!currentHash.startsWith(roomId)) {
+    const video = findVideoElement();
+    const currentTime = video ? Math.floor(video.currentTime) : 0;
     window.location.hash = roomId + '&t=' + currentTime;
     console.log('Room link generated, reloading page to sync state...');
     setTimeout(() => { location.reload(); }, 500);
@@ -430,3 +473,35 @@ function pollForNetflix() {
     setTimeout(() => { clearInterval(checkNetflix); }, 30000);
   }
 }
+
+// Add a MutationObserver to detect URL hash changes
+function monitorForRoomLinks() {
+  let lastHash = window.location.hash;
+  
+  // Check hash periodically
+  setInterval(() => {
+    if (window.location.hash !== lastHash) {
+      lastHash = window.location.hash;
+      console.log('URL hash changed, checking for room ID');
+      
+      if (shouldActivateSync()) {
+        const hash = window.location.hash.slice(1);
+        const parts = hash.split('&t=');
+        roomId = parts[0];
+        syncActive = true;
+        joinRoom(roomId);
+      }
+    }
+  }, 1000);
+}
+
+// Initialize - but only activate full functionality when needed
+try {
+  setupVideoSync();
+  monitorForRoomLinks();
+} catch (e) {
+  console.error('Error in video sync initialization:', e);
+}
+
+// Monitor URL for future room links
+monitorForRoomLinks();

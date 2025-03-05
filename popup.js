@@ -174,7 +174,7 @@ document.addEventListener('DOMContentLoaded', function() {
     });
   }
   
-  // Create a new room
+  // Create a new room - modified to explicitly notify content script
   function createNewRoom() {
     // Generate random room ID
     const roomId = 'room_' + Math.random().toString(36).substring(2, 8);
@@ -203,6 +203,12 @@ document.addEventListener('DOMContentLoaded', function() {
             return;
           }
           
+          // Explicitly tell content script to activate sync
+          chrome.tabs.sendMessage(tabs[0].id, {
+            type: 'joinRoomFromPopup',
+            roomId: roomId
+          }).catch(err => console.error('Failed to notify content script:', err));
+          
           const currentUrl = new URL(tabs[0].url);
           currentUrl.hash = roomId;
           chrome.tabs.update(tabs[0].id, { url: currentUrl.toString() });
@@ -226,7 +232,7 @@ document.addEventListener('DOMContentLoaded', function() {
     joinRoom(roomId);
   }
   
-  // Join a room
+  // Join a room - modified to notify content script
   function joinRoom(roomId) {
     chrome.runtime.sendMessage({ 
       type: 'joinRoom',
@@ -246,6 +252,21 @@ document.addEventListener('DOMContentLoaded', function() {
       
       // Load chat history
       loadChatHistory(roomId);
+      
+      // Tell content script to activate sync
+      chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
+        if (tabs.length > 0) {
+          chrome.tabs.sendMessage(tabs[0].id, {
+            type: 'joinRoomFromPopup',
+            roomId: roomId
+          }).catch(err => console.error('Failed to notify content script:', err));
+          
+          // Also update the URL hash
+          chrome.tabs.executeScript(tabs[0].id, {
+            code: `window.location.hash = '${roomId}';`
+          }).catch(err => console.error('Failed to update URL hash:', err));
+        }
+      });
       
       showNotification('Joined room!', `You're now in room ${roomId}`);
     });
