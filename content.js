@@ -193,8 +193,7 @@ function setupVideoSync() {
     }
   });
   
-  // Create the UI immediately
-  createEnhancedUI();
+
 }
 
 // Find video element
