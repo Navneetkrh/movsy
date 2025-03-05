@@ -53,7 +53,7 @@
     
     function connectToServer() {
       try {
-        ws = new WebSocket('ws://localhost:3000');
+        ws = new WebSocket('ws://movsy-production.up.railway.app/');
         
         ws.onopen = () => {
           statusDiv.textContent = 'Connected to WebSocket server';
