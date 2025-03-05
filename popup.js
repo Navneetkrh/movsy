@@ -110,7 +110,7 @@ document.addEventListener('DOMContentLoaded', function() {
       if (result.serverUrl) {
         serverUrlInput.value = result.serverUrl;
       } else {
-        serverUrlInput.value = 'ws://localhost:3000';
+        serverUrlInput.value = 'ws://movsy-production.up.railway.app';
       }
     });
   }
@@ -174,9 +174,8 @@ document.addEventListener('DOMContentLoaded', function() {
     });
   }
   
-  // Create a new room - modified to explicitly notify content script
+  // Create a new room - updated with better error handling
   function createNewRoom() {
-    // Generate random room ID
     const roomId = 'room_' + Math.random().toString(36).substring(2, 8);
     
     chrome.runtime.sendMessage({ 
@@ -196,27 +195,56 @@ document.addEventListener('DOMContentLoaded', function() {
         chatRoomId.textContent = `Room: ${roomId}`;
         showChatInterface(true);
         
-        // Update the URL of the current page
-        chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
+        chrome.tabs.query({ active: true, currentWindow: true }, async (tabs) => {
           if (tabs.length === 0) {
             console.error('No active tab found');
             return;
           }
           
-          // Explicitly tell content script to activate sync
-          chrome.tabs.sendMessage(tabs[0].id, {
-            type: 'joinRoomFromPopup',
-            roomId: roomId
-          }).catch(err => console.error('Failed to notify content script:', err));
+          const tab = tabs[0];
           
-          const currentUrl = new URL(tabs[0].url);
-          currentUrl.hash = roomId;
-          chrome.tabs.update(tabs[0].id, { url: currentUrl.toString() });
+          try {
+            // First update the URL
+            const currentUrl = new URL(tab.url);
+            currentUrl.hash = roomId;
+            await chrome.tabs.update(tab.id, { url: currentUrl.toString() });
+            
+            // Wait for the page to load
+            await new Promise(resolve => setTimeout(resolve, 500));
+            
+            // Try to notify content script multiple times
+            let attempts = 0;
+            const maxAttempts = 5;
+            
+            const tryNotifyContentScript = async () => {
+              try {
+                await chrome.tabs.sendMessage(tab.id, {
+                  type: 'joinRoomFromPopup',
+                  roomId: roomId
+                });
+                console.log('Successfully notified content script');
+                copyRoomLink();
+                showNotification('Room created!', 'Link copied to clipboard');
+              } catch (err) {
+                attempts++;
+                console.log(`Attempt ${attempts} failed to notify content script`);
+                if (attempts < maxAttempts) {
+                  setTimeout(tryNotifyContentScript, 1000);
+                } else {
+                  console.error('Failed to notify content script after multiple attempts');
+                  // Still proceed, as the page reload will trigger the content script
+                  copyRoomLink();
+                  showNotification('Room created!', 'Link copied to clipboard');
+                }
+              }
+            };
+            
+            tryNotifyContentScript();
+          } catch (err) {
+            console.error('Error updating tab:', err);
+            showNotification('Warning', 'Room created but URL update failed');
+          }
         });
-        
-        // Notify user
-        copyRoomLink()
-        showNotification('Room created!', 'Link copied to clipboard');
       } else {
         showNotification('Error', 'Failed to create room. Please try again.');
       }
@@ -232,7 +260,7 @@ document.addEventListener('DOMContentLoaded', function() {
     joinRoom(roomId);
   }
   
-  // Join a room - modified to notify content script
+  // Join a room - updated with better error handling
   function joinRoom(roomId) {
     chrome.runtime.sendMessage({ 
       type: 'joinRoom',
@@ -250,25 +278,54 @@ document.addEventListener('DOMContentLoaded', function() {
       chatRoomId.textContent = `Room: ${roomId}`;
       showChatInterface(true);
       
-      // Load chat history
       loadChatHistory(roomId);
       
-      // Tell content script to activate sync
-      chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
-        if (tabs.length > 0) {
-          chrome.tabs.sendMessage(tabs[0].id, {
-            type: 'joinRoomFromPopup',
-            roomId: roomId
-          }).catch(err => console.error('Failed to notify content script:', err));
+      chrome.tabs.query({ active: true, currentWindow: true }, async (tabs) => {
+        if (tabs.length === 0) return;
+        
+        const tab = tabs[0];
+        
+        try {
+          // First update URL hash
+          await chrome.scripting.executeScript({
+            target: { tabId: tab.id },
+            func: (roomId) => { window.location.hash = roomId; },
+            args: [roomId]
+          });
           
-          // Also update the URL hash
-          chrome.tabs.executeScript(tabs[0].id, {
-            code: `window.location.hash = '${roomId}';`
-          }).catch(err => console.error('Failed to update URL hash:', err));
+          // Wait for hash change to settle
+          await new Promise(resolve => setTimeout(resolve, 500));
+          
+          // Try to notify content script multiple times
+          let attempts = 0;
+          const maxAttempts = 5;
+          
+          const tryNotifyContentScript = async () => {
+            try {
+              await chrome.tabs.sendMessage(tab.id, {
+                type: 'joinRoomFromPopup',
+                roomId: roomId
+              });
+              console.log('Successfully notified content script');
+              showNotification('Joined room!', `You're now in room ${roomId}`);
+            } catch (err) {
+              attempts++;
+              if (attempts < maxAttempts) {
+                setTimeout(tryNotifyContentScript, 1000);
+              } else {
+                // The page reload from hash change will handle it
+                showNotification('Joined room!', `You're now in room ${roomId}`);
+              }
+            }
+          };
+          
+          tryNotifyContentScript();
+        } catch (err) {
+          console.error('Error updating tab:', err);
+          // Still show success since room was joined
+          showNotification('Joined room!', `You're now in room ${roomId}`);
         }
       });
-      
-      showNotification('Joined room!', `You're now in room ${roomId}`);
     });
   }
   

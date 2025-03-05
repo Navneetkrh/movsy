@@ -390,37 +390,71 @@ function addSystemMessage(text) {
   addChatMessage({ isSystem: true, text });
 }
 
-// Add a chat message to the floating UI
+// Add a chat message to the UI
 function addChatMessage(message) {
   const chatMessages = document.getElementById('vs-chat-messages');
   if (!chatMessages) return;
+
+  // Prevent duplicate messages
+  const existingMessages = chatMessages.querySelectorAll('.vs-message');
+  for (const existing of existingMessages) {
+    if (existing.dataset.timestamp === message.timestamp?.toString() &&
+        existing.dataset.username === message.username &&
+        existing.querySelector('.vs-text')?.textContent === message.text) {
+      return; // Skip duplicate
+    }
+  }
+
   const msgEl = document.createElement('div');
+  msgEl.dataset.timestamp = message.timestamp?.toString();
+  msgEl.dataset.username = message.username;
+  
   if (message.isSystem) {
     msgEl.className = 'vs-message system';
     msgEl.textContent = message.text;
   } else {
     const isSent = message.username === username;
     msgEl.className = `vs-message ${isSent ? 'sent' : 'received'}`;
+    
     const sender = document.createElement('span');
     sender.className = 'vs-sender';
     sender.textContent = message.username || 'Anonymous';
+    
     const text = document.createElement('span');
+    text.className = 'vs-text';
     text.textContent = message.text;
-    if (message.timestamp) {
-      const time = document.createElement('span');
-      time.className = 'vs-timestamp';
-      time.textContent = new Date(message.timestamp).toLocaleTimeString([], {
-        hour: '2-digit',
-        minute: '2-digit'
-      });
-      msgEl.appendChild(time);
-    }
+    
+    const time = document.createElement('span');
+    time.className = 'vs-timestamp';
+    time.textContent = formatTimestamp(message.timestamp);
+
     msgEl.appendChild(sender);
-    msgEl.appendChild(document.createElement('br'));
     msgEl.appendChild(text);
+    msgEl.appendChild(time);
   }
+  
   chatMessages.appendChild(msgEl);
-  chatMessages.scrollTop = chatMessages.scrollHeight;
+  scrollChatToBottom();
+}
+
+// Load chat history with deduplication
+function loadChatHistory(roomId) {
+  chrome.runtime.sendMessage({ type: 'getChatHistory', roomId }, (response) => {
+    if (response && response.messages) {
+      const chatMessages = document.getElementById('vs-chat-messages');
+      if (!chatMessages) return;
+      
+      // Clear existing messages
+      chatMessages.innerHTML = '';
+      
+      // Add each message, skipping duplicates
+      response.messages.forEach(msg => {
+        addChatMessage(msg);
+      });
+      
+      scrollChatToBottom();
+    }
+  });
 }
 
 // Render chat history in the UI

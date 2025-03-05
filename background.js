@@ -1,126 +1,79 @@
-// Basic background service worker for Video Sync extension
-
-// Global variables
 let socket = null;
-let serverUrl = 'ws://localhost:3000';
+let serverUrl = 'ws://movsy-production.up.railway.app';
 let currentRoom = null;
 let connected = false;
 let reconnectTimer = null;
-let chatHistory = new Map(); // Store chat messages by roomId
+let chatHistory = new Map();
+let messageQueue = new Map();
 
-// Initialize when service worker starts
 function initialize() {
-  console.log('Video Sync background script initializing...');
-  
-  // Get server URL from storage
+  console.log('Video Sync initializing...');
   chrome.storage.sync.get(['serverUrl'], (result) => {
-    if (result.serverUrl) {
-      serverUrl = result.serverUrl;
-      console.log('Using server URL from storage:', serverUrl);
-    }
-    
-    // Connect to server
+    if (result.serverUrl) serverUrl = result.serverUrl;
     connectToServer();
   });
 }
 
-// Connect to WebSocket server
 function connectToServer() {
-  if (socket && socket.readyState === WebSocket.CONNECTING) {
-    console.log('Already connecting to server');
-    return;
-  }
+  if (socket?.readyState === WebSocket.CONNECTING) return;
   
-  // Clear any reconnect timer
   if (reconnectTimer) {
     clearTimeout(reconnectTimer);
     reconnectTimer = null;
   }
   
-  console.log('Connecting to server:', serverUrl);
-  
   try {
     socket = new WebSocket(serverUrl);
     
-    // Socket event handlers
     socket.onopen = () => {
-      console.log('Connected to server');
       connected = true;
-      
-      // Notify any active tabs
       broadcastConnectionStatus(true);
-      
-      // Rejoin room if we were in one
       if (currentRoom) {
-        console.log('Rejoining room:', currentRoom);
         socket.send(JSON.stringify({
           type: 'joinRoom',
           roomId: currentRoom
         }));
       }
-      
-      // Start ping to keep connection alive
-      startPing();
     };
     
-    socket.onclose = (event) => {
-      console.log('Disconnected from server:', event.code, event.reason);
+    socket.onclose = () => {
       connected = false;
-      
-      // Notify any active tabs
       broadcastConnectionStatus(false);
-      
-      // Try to reconnect after a delay
       reconnectTimer = setTimeout(connectToServer, 5000);
     };
     
-    socket.onerror = (error) => {
-      console.error('Socket error');
+    socket.onerror = () => {
       connected = false;
-      
-      // Notify any active tabs
       broadcastConnectionStatus(false);
     };
     
     socket.onmessage = (event) => {
       try {
-        const message = JSON.parse(event.data);
-        handleServerMessage(message);
+        handleServerMessage(JSON.parse(event.data));
       } catch (err) {
-        console.error('Error parsing server message');
+        console.error('Error handling message:', err);
       }
     };
   } catch (err) {
-    console.error('Error creating WebSocket');
-    
-    // Schedule reconnect
+    console.error('Connection error:', err);
     reconnectTimer = setTimeout(connectToServer, 5000);
   }
 }
 
-// Handle messages from server
 function handleServerMessage(message) {
-  console.log('Server message:', message.type);
+  console.log('Received server message:', message.type);
   
   switch (message.type) {
     case 'connected':
-      console.log('Server acknowledged connection');
-      break;
-      
     case 'roomJoined':
-      currentRoom = message.roomId;
-      console.log('Joined room:', currentRoom);
+      if (message.roomId) currentRoom = message.roomId;
       break;
       
     case 'videoCommand':
-      // Forward to content scripts
       if (currentRoom) {
-        // Translate event names to actions
-        const action = message.eventName === 'seeked' ? 'seek' : message.eventName;
-        
         broadcastToTabs({
           type: 'videoControl',
-          action: action,
+          action: message.eventName === 'seeked' ? 'seek' : message.eventName,
           time: message.currentTime
         });
       }
@@ -128,56 +81,46 @@ function handleServerMessage(message) {
       
     case 'chatMessage':
       // Store in chat history
-      if (currentRoom) {
-        if (!chatHistory.has(currentRoom)) {
-          chatHistory.set(currentRoom, []);
+      if (!message.roomId) message.roomId = currentRoom;
+      if (message.roomId) {
+        if (!chatHistory.has(message.roomId)) {
+          chatHistory.set(message.roomId, []);
         }
-        chatHistory.get(currentRoom).push(message);
         
-        // Forward to tabs
-        broadcastToTabs(message);
+        // Add timestamp if missing
+        if (!message.timestamp) {
+          message.timestamp = Date.now();
+        }
+        
+        const messages = chatHistory.get(message.roomId);
+        messages.push(message);
+        
+        // Limit history size
+        if (messages.length > 100) messages.shift();
+        
+        // Forward to all tabs
+        broadcastToTabs({
+          type: 'chatMessage',
+          ...message
+        });
+        
+        // Store in local storage
+        chrome.storage.local.set({
+          [`chat_${message.roomId}`]: messages
+        });
       }
-      break;
-      
-    case 'memberUpdate':
-      // Forward to tabs
-      if (currentRoom) {
-        broadcastToTabs(message);
-      }
-      break;
-      
-    case 'syncState':
-      // Respond to requestPlaybackStatus
-      broadcastToTabs({
-        type: 'syncResponse',
-        currentTime: message.currentTime,
-        isPlaying: message.isPlaying
-      });
-      break;
-      
-    case 'pong':
-      // Server responded to ping, connection is alive
-      console.log('Received pong from server');
       break;
   }
 }
 
-// Broadcast message to all tabs
 function broadcastToTabs(message) {
   chrome.tabs.query({}, (tabs) => {
-    for (const tab of tabs) {
-      try {
-        chrome.tabs.sendMessage(tab.id, message).catch(() => {
-          // Ignore errors for tabs that can't receive messages
-        });
-      } catch (err) {
-        // Ignore errors for tabs that can't receive messages
-      }
-    }
+    tabs.forEach(tab => {
+      chrome.tabs.sendMessage(tab.id, message).catch(() => {});
+    });
   });
 }
 
-// Broadcast connection status to all tabs
 function broadcastConnectionStatus(isConnected) {
   broadcastToTabs({
     type: 'serverConnectionStatus',
@@ -185,21 +128,9 @@ function broadcastConnectionStatus(isConnected) {
   });
 }
 
-// Keep connection alive with ping
-function startPing() {
-  // Send ping every 30 seconds
-  setInterval(() => {
-    if (socket && socket.readyState === WebSocket.OPEN) {
-      socket.send(JSON.stringify({ type: 'ping' }));
-    }
-  }, 30000);
-}
-
-// Listen for messages from content scripts and popup
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   console.log('Received message:', message.type);
   
-  // Handle different message types
   switch (message.type) {
     case 'getConnectionStatus':
       sendResponse({ connected });
@@ -209,138 +140,107 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
       sendResponse({ roomId: currentRoom });
       break;
       
-    case 'updateServerUrl':
-      serverUrl = message.url;
-      chrome.storage.sync.set({ serverUrl });
-      
-      // Reconnect with new URL
-      if (socket) {
-        socket.close();
-      }
-      connectToServer();
-      break;
-      
     case 'createRoom':
     case 'joinRoom':
       if (!connected) {
-        sendResponse({ success: false, reason: 'Not connected to server' });
+        sendResponse({ success: false, reason: 'Not connected' });
         return true;
       }
-      
       currentRoom = message.roomId;
-      
-      // Send join message to server
-      if (socket && socket.readyState === WebSocket.OPEN) {
-        socket.send(JSON.stringify({
-          type: 'joinRoom',
-          roomId: message.roomId,
-          username: message.username
-        }));
-        sendResponse({ success: true });
-      } else {
-        sendResponse({ success: false, reason: 'Socket not open' });
-      }
+      socket?.send(JSON.stringify({
+        type: 'joinRoom',
+        roomId: message.roomId,
+        username: message.username
+      }));
+      sendResponse({ success: true });
       break;
       
     case 'videoEvent':
-      if (!currentRoom || !connected) {
+      if (!currentRoom || !connected) return true;
+      socket?.send(JSON.stringify({
+        type: 'videoEvent',
+        roomId: currentRoom,
+        eventName: message.eventName,
+        currentTime: message.currentTime
+      }));
+      break;
+      
+    case 'getChatHistory':
+      const roomId = message.roomId || currentRoom;
+      if (!roomId) {
+        sendResponse({ messages: [] });
         return true;
       }
       
-      // Send video event to server
-      if (socket && socket.readyState === WebSocket.OPEN) {
-        socket.send(JSON.stringify({
-          type: 'videoEvent',
-          roomId: currentRoom,
-          eventName: message.eventName,
-          currentTime: message.currentTime
-        }));
+      // First check memory
+      let messages = chatHistory.get(roomId) || [];
+      
+      // If empty, try loading from storage
+      if (messages.length === 0) {
+        chrome.storage.local.get([`chat_${roomId}`], (result) => {
+          if (result[`chat_${roomId}`]) {
+            messages = result[`chat_${roomId}`];
+            chatHistory.set(roomId, messages);
+          }
+          sendResponse({ messages });
+        });
+        return true;
       }
+      
+      sendResponse({ messages });
       break;
       
     case 'sendChatMessage':
       if (!currentRoom || !connected) {
-        sendResponse({ success: false, reason: 'Not connected or no room' });
+        // Queue message for later if disconnected
+        if (!messageQueue.has(currentRoom)) {
+          messageQueue.set(currentRoom, []);
+        }
+        messageQueue.get(currentRoom).push(message);
+        sendResponse({ success: false, reason: 'Not connected', queued: true });
         return true;
       }
       
       const chatMessage = {
         type: 'chatMessage',
-        roomId: message.roomId,
+        roomId: message.roomId || currentRoom,
         username: message.username,
         text: message.text,
         timestamp: Date.now()
       };
       
-      // Store in chat history
-      if (!chatHistory.has(message.roomId)) {
-        chatHistory.set(message.roomId, []);
-      }
-      chatHistory.get(message.roomId).push(chatMessage);
-      
-      // Send to server
-      if (socket && socket.readyState === WebSocket.OPEN) {
+      try {
+        // Send to server
         socket.send(JSON.stringify(chatMessage));
+        
+        // Store locally
+        if (!chatHistory.has(chatMessage.roomId)) {
+          chatHistory.set(chatMessage.roomId, []);
+        }
+        chatHistory.get(chatMessage.roomId).push(chatMessage);
+        
+        // Store in local storage
+        chrome.storage.local.set({
+          [`chat_${chatMessage.roomId}`]: chatHistory.get(chatMessage.roomId)
+        });
+        
         sendResponse({ success: true });
-      } else {
-        sendResponse({ success: false, reason: 'Socket not open' });
-      }
-      break;
-      
-    case 'getChatHistory':
-      const roomMessages = chatHistory.get(message.roomId) || [];
-      sendResponse({ messages: roomMessages });
-      break;
-      
-    case 'updateUsername':
-      if (socket && socket.readyState === WebSocket.OPEN) {
-        socket.send(JSON.stringify({
-          type: 'updateUsername',
-          username: message.username,
-          roomId: message.roomId
-        }));
-      }
-      break;
-      
-    case 'requestSync':
-      if (socket && socket.readyState === WebSocket.OPEN) {
-        socket.send(JSON.stringify({
-          type: 'requestSync',
-          roomId: message.roomId
-        }));
-      }
-      break;
-      
-    case 'requestPlaybackStatus':
-      if (socket && socket.readyState === WebSocket.OPEN) {
-        socket.send(JSON.stringify({
-          type: 'requestSync',
-          roomId: message.roomId
-        }));
-        // Wait for response from server before responding
-        // This is handled in the socket.onmessage event
-        // For now, respond with no data
-        sendResponse({});
-      } else {
-        sendResponse({});
+      } catch (err) {
+        console.error('Failed to send chat message:', err);
+        sendResponse({ success: false, error: err.message });
       }
       break;
   }
   
-  return true; // Keep the message channel open for async responses
+  return true;
 });
 
-// Create an alarm for keeping the service worker alive
-chrome.alarms.create('keepAlive', {
-  periodInMinutes: 1
-});
-
-// Listen for alarm events
+// Keep service worker alive
+chrome.alarms.create('keepAlive', { periodInMinutes: 1 });
 chrome.alarms.onAlarm.addListener((alarm) => {
-  if (alarm.name === 'keepAlive') {
-    console.log('Keep-alive ping');
+  if (alarm.name === 'keepAlive' && socket?.readyState === WebSocket.OPEN) {
+    socket.send(JSON.stringify({ type: 'ping' }));
   }
 });
 
-// Start the background script
 initialize();
