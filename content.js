@@ -11,6 +11,14 @@ let messageHistory = [];
 let isNetflix = false;
 let netflixInjected = false;
 
+// Add this function near the top with other initialization code
+function initTestMode() {
+  console.log('Initializing test mode');
+  const script = document.createElement('script');
+  script.src = chrome.runtime.getURL('testing-controls.js');
+  document.head.appendChild(script);
+}
+
 // Try to get room ID from URL hash
 if (window.location.hash) {
   roomId = window.location.hash.slice(1);
@@ -80,6 +88,11 @@ function setupVideoSync() {
   
   console.log('Found video element, setting up sync');
   
+  // Add this line to start testing
+  if (window.location.hash.includes('test')) {
+    initTestMode();
+  }
+
   // Handle local video events
   video.addEventListener('play', () => {
     if (ignoreEvents) return;
