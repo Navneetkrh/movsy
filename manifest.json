@@ -1,19 +1,19 @@
 {
   "manifest_version": 3,
-  "name": "Video Sync",
+  "name": "Movsy - Netflix & YouTube Sync",
   "version": "1.0",
-  "description": "Watch videos in sync with friends",
+  "description": "Watch videos together with friends, synchronized across different devices",
   "icons": {
-    "16": "icons/icon16.png",
-    "48": "icons/icon48.png",
-    "128": "icons/icon128.png"
+    "16": "images/icon16.png",
+    "48": "images/icon48.png",
+    "128": "images/icon128.png"
   },
   "action": {
     "default_popup": "popup.html",
     "default_icon": {
-      "16": "icons/icon16.png",
-      "48": "icons/icon48.png",
-      "128": "icons/icon128.png"
+      "16": "images/icon16.png",
+      "48": "images/icon48.png",
+      "128": "images/icon128.png"
     }
   },
   "background": {
@@ -21,9 +21,21 @@
   },
   "content_scripts": [
     {
-      "matches": ["<all_urls>"],
+      "matches": [
+        "*://*.youtube.com/*",
+        "*://*.netflix.com/*",
+        "*://*.disneyplus.com/*",
+        "*://*.primevideo.com/*",
+        "*://*.amazon.com/*/video/*"
+      ],
       "js": ["content.js"],
-      "run_at": "document_idle"
+      "css": ["content-styles.css"]
+    }
+  ],
+  "web_accessible_resources": [
+    {
+      "resources": ["netflix-injector.js"],
+      "matches": ["*://*.netflix.com/*"]
     }
   ],
   "options_ui": {
@@ -33,7 +45,8 @@
   "permissions": [
     "storage",
     "tabs",
-    "activeTab"
+    "activeTab",
+    "scripting"
   ],
   "host_permissions": [
     "*://*/*"

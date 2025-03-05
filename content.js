@@ -8,6 +8,8 @@ let ignoreEvents = false;
 let chatVisible = false;
 let username = localStorage.getItem('videoSync_username') || 'Guest_' + Math.floor(Math.random() * 1000);
 let messageHistory = [];
+let isNetflix = false;
+let netflixInjected = false;
 
 // Try to get room ID from URL hash
 if (window.location.hash) {
@@ -18,8 +20,54 @@ if (window.location.hash) {
   joinRoom(roomId);
 }
 
+// Check if we're on Netflix and inject the controller if needed
+function checkForNetflix() {
+  isNetflix = window.location.hostname.includes('netflix.com');
+  
+  if (isNetflix && !netflixInjected) {
+    injectNetflixController();
+  }
+}
+
+// Inject Netflix controller script
+function injectNetflixController() {
+  try {
+    const script = document.createElement('script');
+    script.src = chrome.runtime.getURL('netflix-injector.js');
+    document.head.appendChild(script);
+    
+    // Listen for messages from the injected script
+    window.addEventListener('message', (event) => {
+      // Only process messages from our injected script
+      if (event.data && event.data.source === 'movsy_netflix') {
+        if (event.data.status === 'ready') {
+          console.log('Netflix controller injected successfully');
+          netflixInjected = true;
+        }
+        
+        // Handle time update from Netflix player
+        if (event.data.currentTime !== undefined) {
+          // Forward this to sync server if needed
+          if (!ignoreEvents) {
+            chrome.runtime.sendMessage({
+              type: 'videoEvent',
+              eventName: event.data.isPlaying ? 'play' : 'pause',
+              currentTime: event.data.currentTime
+            });
+          }
+        }
+      }
+    });
+  } catch (err) {
+    console.error('Failed to inject Netflix controller:', err);
+  }
+}
+
 // Video sync functionality
 function setupVideoSync() {
+  // Check if we're on Netflix
+  checkForNetflix();
+  
   // Find video element
   const video = findVideoElement();
  
@@ -77,18 +125,29 @@ function setupVideoSync() {
       
       // Execute command
       try {
-        if (message.action === 'play') {
-          if (Math.abs(video.currentTime - message.time) > 0.5) {
+        if (isNetflix && netflixInjected) {
+          // Use Netflix injected controller
+          window.postMessage({
+            source: 'movsy_extension',
+            action: message.action,
+            time: message.time,
+            playbackRate: 1.0
+          }, '*');
+        } else {
+          // Standard video element control
+          if (message.action === 'play') {
+            if (Math.abs(video.currentTime - message.time) > 0.5) {
+              video.currentTime = message.time;
+            }
+            video.play().catch(err => {
+              console.error('Error playing video:', err);
+            });
+          } else if (message.action === 'pause') {
+            video.currentTime = message.time;
+            video.pause();
+          } else if (message.action === 'seeked') {
             video.currentTime = message.time;
           }
-          video.play().catch(err => {
-            console.error('Error playing video:', err);
-          });
-        } else if (message.action === 'pause') {
-          video.currentTime = message.time;
-          video.pause();
-        } else if (message.action === 'seeked') {
-          video.currentTime = message.time;
         }
       } catch (err) {
         console.error('Error executing command:', err);
@@ -132,15 +191,12 @@ function findVideoElement() {
     return document.querySelector('video.html5-main-video');
   }
   
-  
-    // Netflix specific
+  // Netflix specific
   if (window.location.hostname.includes('netflix.com')) {
     // Try Netflix player container first (more reliable)
     const netflixPlayer = document.querySelector('.NFPlayer');
     if (netflixPlayer) {
       const video = netflixPlayer.querySelector('video');
-     
-
       if (video) return video;
     }
     
@@ -220,14 +276,24 @@ function joinRoom(id) {
                 // Set flag to ignore our own events
                 ignoreEvents = true;
                 
-                // Set video time and playback state
-                video.currentTime = playbackResponse.currentTime;
-                
-                // Match playback state (play if others are playing, pause otherwise)
-                if (playbackResponse.isPlaying) {
-                  video.play().catch(err => console.error('Error auto-playing video:', err));
+                // Handle sync for Netflix differently
+                if (isNetflix && netflixInjected) {
+                  window.postMessage({
+                    source: 'movsy_extension',
+                    action: playbackResponse.isPlaying ? 'play' : 'pause',
+                    time: playbackResponse.currentTime,
+                    playbackRate: 1.0
+                  }, '*');
                 } else {
-                  video.pause();
+                  // Set video time and playback state for other platforms
+                  video.currentTime = playbackResponse.currentTime;
+                  
+                  // Match playback state (play if others are playing, pause otherwise)
+                  if (playbackResponse.isPlaying) {
+                    video.play().catch(err => console.error('Error auto-playing video:', err));
+                  } else {
+                    video.pause();
+                  }
                 }
                 
                 // Reset flag after a delay
@@ -267,6 +333,30 @@ function joinRoom(id) {
   });
 }
 
+// Poll for Netflix player readiness
+function pollForNetflix() {
+  if (window.location.hostname.includes('netflix.com')) {
+    const checkNetflix = setInterval(() => {
+      if (window.netflix && window.netflix.appContext && 
+          window.netflix.appContext.state && 
+          window.netflix.appContext.state.playerApp) {
+        console.log('Netflix player detected, injecting controller');
+        clearInterval(checkNetflix);
+        injectNetflixController();
+      }
+    }, 1000);
+    
+    // Stop checking after 30 seconds
+    setTimeout(() => {
+      clearInterval(checkNetflix);
+    }, 30000);
+  }
+}
 
 // Initialize video sync
 setupVideoSync();
+
+// For Netflix, monitor page for player initialization
+if (window.location.hostname.includes('netflix.com')) {
+  pollForNetflix();
+}
