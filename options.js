@@ -10,6 +10,8 @@ document.addEventListener('DOMContentLoaded', function() {
   const showNotificationsToggle = document.getElementById('showNotifications');
   const autoJoinRoomsToggle = document.getElementById('autoJoinRooms');
   const chatHistoryLimitSelect = document.getElementById('chatHistoryLimit');
+
+  const serverUrl = 'ws://movsy-production.up.railway.app/';
   
   // Load current settings
   loadSettings();
@@ -146,7 +148,7 @@ document.addEventListener('DOMContentLoaded', function() {
         if (items.serverUrl) {
           serverUrlInput.value = items.serverUrl;
         } else {
-          serverUrlInput.value = 'ws://localhost:3000';
+          serverUrlInput.value = 'ws://movsy-production.up.railway.app/';
         }
         
         // Display settings

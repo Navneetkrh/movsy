@@ -110,7 +110,7 @@ document.addEventListener('DOMContentLoaded', function() {
       if (result.serverUrl) {
         serverUrlInput.value = result.serverUrl;
       } else {
-        serverUrlInput.value = 'ws://localhost:3000';
+        serverUrlInput.value = 'ws://movsy-production.up.railway.app/';
       }
     });
   }
