@@ -209,7 +209,8 @@ document.addEventListener('DOMContentLoaded', function() {
         });
         
         // Notify user
-        showNotification('Room created!', 'Click "Copy Sync Link" to share');
+        copyRoomLink()
+        showNotification('Room created!', 'Link copied to clipboard');
       } else {
         showNotification('Error', 'Failed to create room. Please try again.');
       }
