@@ -45,5 +45,6 @@
   "web_accessible_resources": [{
     "resources": ["netflix-injector.js", "testing-controls.js"],
     "matches": ["*://*.netflix.com/*"]
-  }]
+  }],
+  "privacy_policy_url": "https://yourdomain.com/privacy.html"
 }
