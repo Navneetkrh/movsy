@@ -209,6 +209,14 @@ function joinRoom(id) {
           chrome.runtime.sendMessage({
             type: 'requestSync',
             roomId: roomId
+          }, syncResponse => {
+            if (syncResponse && syncResponse.currentTime !== undefined) {
+              const video = findVideoElement();
+              if (video) {
+                video.currentTime = syncResponse.currentTime;
+                console.log('⏱️ Synced video to:', syncResponse.currentTime);
+              }
+            }
           });
           
           // Request chat history
@@ -231,7 +239,6 @@ function joinRoom(id) {
     });
   });
 }
-
 
 // Initialize video sync
 setupVideoSync();
