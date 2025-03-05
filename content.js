@@ -13,6 +13,21 @@ let messageHistory = [];
 let isNetflix = false;
 let netflixInjected = false;
 
+// Helper function to safely make runtime API calls
+function safeRuntimeCall(apiCall) {
+  try {
+    return apiCall();
+  } catch (e) {
+    if (e.message.includes('Extension context invalidated')) {
+      console.log('Extension context invalidated. The extension may have been reloaded, disabled, or uninstalled.');
+      // Here we could implement some recovery logic if needed
+      return null;
+    }
+    console.error('Runtime API error:', e);
+    return null;
+  }
+}
+
 // Test mode initialization – loads testing-controls.js if needed
 function initTestMode() {
   console.log('Initializing test mode');
@@ -89,33 +104,41 @@ function setupVideoSync() {
   video.addEventListener('play', () => {
     if (ignoreEvents) return;
     console.log('Video played at:', video.currentTime);
-    chrome.runtime.sendMessage({
-      type: 'videoEvent',
-      eventName: 'play',
-      currentTime: video.currentTime
-    });
+    safeRuntimeCall(() => 
+      chrome.runtime.sendMessage({
+        type: 'videoEvent',
+        eventName: 'play',
+        currentTime: video.currentTime
+      })
+    );
   });
+  
   video.addEventListener('pause', () => {
     if (ignoreEvents) return;
     console.log('Video paused at:', video.currentTime);
-    chrome.runtime.sendMessage({
-      type: 'videoEvent',
-      eventName: 'pause',
-      currentTime: video.currentTime
-    });
+    safeRuntimeCall(() => 
+      chrome.runtime.sendMessage({
+        type: 'videoEvent',
+        eventName: 'pause',
+        currentTime: video.currentTime
+      })
+    );
   });
+  
   video.addEventListener('seeked', () => {
     if (ignoreEvents) return;
     console.log('Video seeked to:', video.currentTime);
-    chrome.runtime.sendMessage({
-      type: 'videoEvent',
-      eventName: 'seek',
-      currentTime: video.currentTime
-    });
+    safeRuntimeCall(() => 
+      chrome.runtime.sendMessage({
+        type: 'videoEvent',
+        eventName: 'seek',
+        currentTime: video.currentTime
+      })
+    );
   });
 
   // Listen for sync commands and chat messages
-  chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
+  const messageListener = (message, sender, sendResponse) => {
     if (message.type === 'videoControl') {
       console.log('Received control command:', message);
       ignoreEvents = true;
@@ -161,7 +184,22 @@ function setupVideoSync() {
     if (message.type === 'memberUpdate') {
       updateMemberCount(message.memberCount);
     }
-  });
+  };
+  
+  try {
+    chrome.runtime.onMessage.addListener(messageListener);
+    
+    // Add listener removal on page unload
+    window.addEventListener('beforeunload', () => {
+      try {
+        chrome.runtime.onMessage.removeListener(messageListener);
+      } catch (e) {
+        // Ignore errors during cleanup
+      }
+    });
+  } catch (e) {
+    console.error('Failed to add message listener:', e);
+  }
 }
 
 // Find video element for various sites
@@ -205,13 +243,15 @@ function joinRoom(id) {
   }
   
   console.log('🚪 Joining room:', roomId);
-  chrome.runtime.sendMessage({ type: 'getConnectionStatus' }, (connectionResponse) => {
+  
+  safeRuntimeCall(() => chrome.runtime.sendMessage({ type: 'getConnectionStatus' }, (connectionResponse) => {
     if (!connectionResponse || !connectionResponse.connected) {
       console.log('⚠️ Server not connected, waiting before joining room...');
       setTimeout(() => joinRoom(roomId), 3000);
       return;
     }
-    chrome.runtime.sendMessage({
+    
+    safeRuntimeCall(() => chrome.runtime.sendMessage({
       type: 'joinRoom',
       roomId: roomId,
       username: username
@@ -222,6 +262,7 @@ function joinRoom(id) {
         setTimeout(() => joinRoom(roomId), 5000);
         return;
       }
+      
       if (joinResponse && joinResponse.success) {
         console.log('✅ Successfully joined room:', roomId);
         addSystemMessage(`You joined room ${roomId}`);
@@ -229,9 +270,10 @@ function joinRoom(id) {
         if (roomIdElement) {
           roomIdElement.textContent = roomId;
         }
+        
         // Request playback sync and chat history
         setTimeout(() => {
-          chrome.runtime.sendMessage({
+          safeRuntimeCall(() => chrome.runtime.sendMessage({
             type: 'requestPlaybackStatus',
             roomId: roomId
           }, (playbackResponse) => {
@@ -264,8 +306,9 @@ function joinRoom(id) {
                 roomId: roomId
               });
             }
-          });
-          chrome.runtime.sendMessage({
+          }));
+          
+          safeRuntimeCall(() => chrome.runtime.sendMessage({
             type: 'getChatHistory',
             roomId: roomId
           }, (response) => {
@@ -275,14 +318,14 @@ function joinRoom(id) {
                 renderChatHistory();
               }
             }
-          });
+          }));
         }, 1000);
       } else {
         console.log('❌ Failed to join room:', joinResponse?.reason || 'unknown reason');
         setTimeout(() => joinRoom(roomId), 5000);
       }
-    });
-  });
+    }));
+  }));
 }
 
 // Update connection indicator (if UI is present)
@@ -345,27 +388,45 @@ function renderChatHistory() {
   messageHistory.forEach(msg => addChatMessage(msg));
 }
 
-// Initialize video sync
-setupVideoSync();
+// Initialize video sync with error handling
+try {
+  setupVideoSync();
+} catch (e) {
+  console.error('Error setting up video sync:', e);
+}
 
 // For Netflix, poll for player readiness and inject controller
 if (window.location.hostname.includes('netflix.com')) {
-  function pollForNetflix() {
-    if (window.location.hostname.includes('netflix.com')) {
-      const checkNetflix = setInterval(() => {
-        if (
-          window.netflix &&
-          window.netflix.appContext &&
-          window.netflix.appContext.state &&
-          window.netflix.appContext.state.playerApp
-        ) {
-          console.log('Netflix player detected, injecting controller');
-          clearInterval(checkNetflix);
-          injectNetflixController();
-        }
-      }, 1000);
-      setTimeout(() => { clearInterval(checkNetflix); }, 30000);
-    }
+  try {
+    pollForNetflix();
+  } catch (e) {
+    console.error('Error starting Netflix polling:', e);
   }
-  pollForNetflix();
+}
+
+// Add listener for extension context changes
+window.addEventListener('error', (event) => {
+  if (event.error && event.error.message && event.error.message.includes('Extension context invalidated')) {
+    console.log('Extension context was invalidated. The extension was likely reloaded or disabled.');
+    // You could attempt to gracefully handle this situation
+    // For example, show a UI notification that sync is disabled
+  }
+});
+
+function pollForNetflix() {
+  if (window.location.hostname.includes('netflix.com')) {
+    const checkNetflix = setInterval(() => {
+      if (
+        window.netflix &&
+        window.netflix.appContext &&
+        window.netflix.appContext.state &&
+        window.netflix.appContext.state.playerApp
+      ) {
+        console.log('Netflix player detected, injecting controller');
+        clearInterval(checkNetflix);
+        injectNetflixController();
+      }
+    }, 1000);
+    setTimeout(() => { clearInterval(checkNetflix); }, 30000);
+  }
 }
