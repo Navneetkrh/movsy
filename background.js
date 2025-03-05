@@ -8,13 +8,13 @@ let reconnectAttempts = 0;
 let reconnectTimeout = null;
 let username = '';
 
-// Server URL (can be overridden in options)
+// Server URL (can be overridden via options)
 let serverUrl = 'ws://localhost:3000';
 
 // Store recent chat messages per room
 const chatHistory = new Map();
 
-// Store room playback states
+// Store room playback states (from server)
 const roomPlaybackStates = {};
 
 // Initialize on extension load
@@ -83,7 +83,7 @@ function scheduleReconnect() {
   }, delay);
 }
 
-// Handle messages from the server
+// Handle messages from the server, including updating room playback state
 function handleServerMessage(message) {
   if (message.type === 'videoCommand') {
     chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
@@ -95,6 +95,14 @@ function handleServerMessage(message) {
         });
       }
     });
+    // Update local playback state for the room
+    if (currentRoomId) {
+      roomPlaybackStates[currentRoomId] = {
+        currentTime: message.currentTime,
+        isPlaying: message.eventName === 'play',
+        lastUpdated: Date.now()
+      };
+    }
   }
   if (message.type === 'roomState') {
     console.log('📊 Room state update:', message);
@@ -125,9 +133,29 @@ function handleServerMessage(message) {
       memberCount: message.memberCount
     }).catch(() => {});
   }
+  // If the server sends an explicit sync state, update local state.
+  if (message.type === 'syncState') {
+    if (message.roomId) {
+      roomPlaybackStates[message.roomId] = {
+        currentTime: message.currentTime,
+        isPlaying: message.isPlaying,
+        lastUpdated: Date.now()
+      };
+      // Forward the sync state to the content script
+      chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
+        if (tabs.length > 0) {
+          chrome.tabs.sendMessage(tabs[0].id, {
+            type: 'syncResponse',
+            currentTime: message.currentTime,
+            isPlaying: message.isPlaying
+          });
+        }
+      });
+    }
+  }
 }
 
-// Join a room
+// Join a room by sending a message to the server
 function joinRoom(roomId) {
   if (!serverConnection || serverConnection.readyState !== WebSocket.OPEN) {
     console.log('Cannot join room: Not connected to server');
@@ -143,7 +171,7 @@ function joinRoom(roomId) {
   return true;
 }
 
-// Request sync state from server
+// Request sync state from the server
 function requestSync() {
   if (!serverConnection || serverConnection.readyState !== WebSocket.OPEN || !currentRoomId) {
     console.log('Cannot request sync: Not connected or no room');
@@ -156,23 +184,23 @@ function requestSync() {
   return true;
 }
 
-// Broadcast connection status
+// Broadcast connection status to all tabs and popup
 function broadcastConnectionStatus(connected) {
   chrome.tabs.query({}, (tabs) => {
     tabs.forEach(tab => {
-      chrome.tabs.sendMessage(tab.id, {
+      chrome.tabs.sendMessage(tab.id, { 
         type: 'serverConnectionStatus',
-        connected: connected
+        connected: connected 
       }).catch(() => {});
     });
   });
-  chrome.runtime.sendMessage({
+  chrome.runtime.sendMessage({ 
     type: 'connectionStatus',
-    connected: connected
+    connected: connected 
   }).catch(() => {});
 }
 
-// Send video event to server
+// Send video event to the server
 function sendVideoEvent(eventName, currentTime) {
   if (!serverConnection || serverConnection.readyState !== WebSocket.OPEN || !currentRoomId) {
     console.log('Cannot send event: Not connected or no room');
@@ -187,7 +215,7 @@ function sendVideoEvent(eventName, currentTime) {
   return true;
 }
 
-// Listen for messages from other parts of the extension
+// Listen for messages from other extension parts
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   console.log('Background received message:', message);
   if (message.type === 'getConnectionStatus') {
@@ -203,7 +231,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     if (message.username) {
       username = message.username;
     }
-    sendResponse({
+    sendResponse({ 
       success: success,
       reason: success ? 'joined' : 'failed to join, not connected'
     });
@@ -211,7 +239,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   }
   if (message.type === 'createRoom') {
     const success = joinRoom(message.roomId);
-    sendResponse({
+    sendResponse({ 
       success: success,
       roomId: message.roomId,
       reason: success ? 'created' : 'failed to create, not connected'
@@ -226,18 +254,13 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   if (message.type === 'videoEvent') {
     const success = sendVideoEvent(message.eventName, message.currentTime);
     sendResponse({ success: success });
-    const roomId = getCurrentRoomId();
-    if (!roomId) return;
-    if (!roomPlaybackStates[roomId]) {
-      roomPlaybackStates[roomId] = {};
+    if (!currentRoomId) return true;
+    if (!roomPlaybackStates[currentRoomId]) {
+      roomPlaybackStates[currentRoomId] = {};
     }
-    roomPlaybackStates[roomId].currentTime = message.currentTime;
-    roomPlaybackStates[roomId].lastUpdated = Date.now();
-    if (message.eventName === 'play') {
-      roomPlaybackStates[roomId].isPlaying = true;
-    } else if (message.eventName === 'pause') {
-      roomPlaybackStates[roomId].isPlaying = false;
-    }
+    roomPlaybackStates[currentRoomId].currentTime = message.currentTime;
+    roomPlaybackStates[currentRoomId].lastUpdated = Date.now();
+    roomPlaybackStates[currentRoomId].isPlaying = (message.eventName === 'play');
     return true;
   }
   if (message.type === 'requestSync') {
@@ -260,9 +283,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   if (message.type === 'updateUsername') {
     username = message.username;
     chrome.storage.sync.set({ username: username });
-    if (serverConnection &&
-        serverConnection.readyState === WebSocket.OPEN &&
-        currentRoomId) {
+    if (serverConnection && serverConnection.readyState === WebSocket.OPEN && currentRoomId) {
       serverConnection.send(JSON.stringify({
         type: 'updateUsername',
         username: username,
@@ -307,6 +328,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     return true;
   }
   if (message.type === 'requestPlaybackStatus') {
+    // Return the stored playback state from the server (if available)
     const roomId = message.roomId || getCurrentRoomId();
     const playbackState = roomPlaybackStates[roomId];
     if (playbackState) {
@@ -338,4 +360,15 @@ function getCurrentRoomId() {
   return currentRoomId;
 }
 
+// Keep-alive alarm to prevent background suspension
+chrome.alarms.create('keepAlive', { periodInMinutes: 1 });
+chrome.alarms.onAlarm.addListener((alarm) => {
+  if (alarm.name === 'keepAlive') {
+    if (serverConnection && serverConnection.readyState === WebSocket.OPEN) {
+      serverConnection.send(JSON.stringify({ type: 'ping' }));
+    }
+  }
+});
+
+// Initialize the background script
 initialize();

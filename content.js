@@ -21,10 +21,14 @@ function initTestMode() {
   document.head.appendChild(script);
 }
 
-// Try to get room ID from URL hash
+// If a room link exists in the URL hash, use it
 if (window.location.hash) {
-  roomId = window.location.hash.slice(1);
+  // Expect roomId[&t=timestamp]
+  const hash = window.location.hash.slice(1);
+  const parts = hash.split('&t=');
+  roomId = parts[0];
   console.log('Found room ID in URL:', roomId);
+  // Optionally, you could use the "t" parameter to immediately set currentTime.
   joinRoom(roomId);
 }
 
@@ -81,7 +85,7 @@ function setupVideoSync() {
     initTestMode();
   }
 
-  // Handle local video events – note the "seeked" event is used for seeking.
+  // Listen for local video events (using "seeked" for seeking)
   video.addEventListener('play', () => {
     if (ignoreEvents) return;
     console.log('Video played at:', video.currentTime);
@@ -110,14 +114,14 @@ function setupVideoSync() {
     });
   });
 
-  // Listen for sync commands and chat messages from background
+  // Listen for sync commands and chat messages
   chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     if (message.type === 'videoControl') {
       console.log('Received control command:', message);
       ignoreEvents = true;
       try {
         if (isNetflix && netflixInjected) {
-          // For Netflix, forward control via postMessage to the injected controller.
+          // Forward control to Netflix via postMessage.
           window.postMessage({
             source: 'movsy_extension',
             action: message.action,
@@ -130,9 +134,7 @@ function setupVideoSync() {
             if (Math.abs(video.currentTime - message.time) > 0.5) {
               video.currentTime = message.time;
             }
-            video.play().catch(err => {
-              console.error('Error playing video:', err);
-            });
+            video.play().catch(err => console.error('Error playing video:', err));
           } else if (message.action === 'pause') {
             video.currentTime = message.time;
             video.pause();
@@ -143,9 +145,7 @@ function setupVideoSync() {
       } catch (err) {
         console.error('Error executing command:', err);
       }
-      setTimeout(() => {
-        ignoreEvents = false;
-      }, 500);
+      setTimeout(() => { ignoreEvents = false; }, 500);
     }
     if (message.type === 'serverConnectionStatus') {
       connected = message.connected;
@@ -177,26 +177,35 @@ function findVideoElement() {
     }
     const videoPlayer = document.querySelector('.VideoContainer video');
     if (videoPlayer) return videoPlayer;
-    console.log("alternate video selector used");
+    console.log("Alternate Netflix video selector used");
     return document.querySelector('video');
   }
   if (window.location.hostname.includes('disneyplus.com')) {
     return document.querySelector('video.btm-media-client-element');
   }
-  if (
-    window.location.hostname.includes('primevideo.com') ||
-    window.location.hostname.includes('amazon.com')
-  ) {
+  if (window.location.hostname.includes('primevideo.com') ||
+      window.location.hostname.includes('amazon.com')) {
     return document.querySelector('video.webPlayerElement');
   }
   return document.querySelector('video');
 }
 
-// Join room and request playback/chat sync
+// Modified joinRoom: update URL hash with room ID and current time, then reload if needed.
 function joinRoom(id) {
   roomId = id;
+  // If the URL hash does not match the roomId, update it and reload.
+  const currentHash = window.location.hash.slice(1);
+  const video = findVideoElement();
+  const currentTime = video ? Math.floor(video.currentTime) : 0;
+  if (!currentHash.startsWith(roomId)) {
+    window.location.hash = roomId + '&t=' + currentTime;
+    console.log('Room link generated, reloading page to sync state...');
+    setTimeout(() => { location.reload(); }, 500);
+    return;
+  }
+  
   console.log('🚪 Joining room:', roomId);
-  chrome.runtime.sendMessage({ type: 'getConnectionStatus' }, connectionResponse => {
+  chrome.runtime.sendMessage({ type: 'getConnectionStatus' }, (connectionResponse) => {
     if (!connectionResponse || !connectionResponse.connected) {
       console.log('⚠️ Server not connected, waiting before joining room...');
       setTimeout(() => joinRoom(roomId), 3000);
@@ -206,7 +215,7 @@ function joinRoom(id) {
       type: 'joinRoom',
       roomId: roomId,
       username: username
-    }, joinResponse => {
+    }, (joinResponse) => {
       const error = chrome.runtime.lastError;
       if (error) {
         console.error('❌ Error joining room:', error);
@@ -225,7 +234,7 @@ function joinRoom(id) {
           chrome.runtime.sendMessage({
             type: 'requestPlaybackStatus',
             roomId: roomId
-          }, playbackResponse => {
+          }, (playbackResponse) => {
             if (playbackResponse && playbackResponse.currentTime !== undefined) {
               console.log('🔄 Syncing to current playback time:', playbackResponse.currentTime);
               const video = findVideoElement();
@@ -259,7 +268,7 @@ function joinRoom(id) {
           chrome.runtime.sendMessage({
             type: 'getChatHistory',
             roomId: roomId
-          }, response => {
+          }, (response) => {
             if (response && response.messages) {
               messageHistory = response.messages;
               if (chatVisible) {
@@ -276,7 +285,7 @@ function joinRoom(id) {
   });
 }
 
-// Update connection indicator in UI (if available)
+// Update connection indicator (if UI is present)
 function updateConnectionIndicator(isConnected) {
   const indicator = document.getElementById('vs-connection-indicator');
   const statusText = document.getElementById('vs-connection-status');
@@ -328,7 +337,7 @@ function addChatMessage(message) {
   chatMessages.scrollTop = chatMessages.scrollHeight;
 }
 
-// Render chat history
+// Render chat history in the UI
 function renderChatHistory() {
   const chatMessages = document.getElementById('vs-chat-messages');
   if (!chatMessages) return;
@@ -339,7 +348,7 @@ function renderChatHistory() {
 // Initialize video sync
 setupVideoSync();
 
-// If on Netflix, poll for player readiness and inject controller
+// For Netflix, poll for player readiness and inject controller
 if (window.location.hostname.includes('netflix.com')) {
   function pollForNetflix() {
     if (window.location.hostname.includes('netflix.com')) {

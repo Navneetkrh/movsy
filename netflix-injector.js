@@ -21,7 +21,7 @@ function getPlayer() {
           player.pause();
           break;
         case 'seek':
-          // Fix: Convert seconds to milliseconds since Netflix uses ms
+          // Convert seconds to milliseconds for Netflix API
           player.seek(event.data.time * 1000);
           break;
         case 'getTime':
