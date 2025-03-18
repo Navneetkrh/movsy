@@ -1,214 +1,253 @@
+const WebSocket = require('ws');
 const express = require('express');
 const http = require('http');
-const WebSocket = require('ws');
 const cors = require('cors');
+const path = require('path');
+
+const app = express();
+app.use(cors());
 
 // Create HTTP server
-const app = express();
 const server = http.createServer(app);
-
-// Configure CORS for HTTP endpoints
-app.use(cors({
-  origin: '*',
-  methods: ['GET', 'POST', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization']
-}));
 
 // Create WebSocket server
 const wss = new WebSocket.Server({ server });
 
-// Room storage
+// Store rooms and connected clients
 const rooms = new Map();
+const clients = new Map();
+// Store playback state for each room: { currentTime, isPlaying, lastUpdated }
+const roomPlaybackState = new Map();
 
-// Track connections
-let connectionCount = 0;
-
-// HTTP endpoints
+// Health endpoint
 app.get('/health', (req, res) => {
-  console.log(`✅ Health check from ${req.ip}`);
-  res.json({ status: 'healthy', rooms: rooms.size, connections: connectionCount });
+  res.json({
+    status: 'ok',
+    rooms: rooms.size,
+    connections: clients.size
+  });
 });
 
-app.get('/', (req, res) => {
-  res.json({ status: 'Video Sync Server', activeRooms: Array.from(rooms.keys()) });
+// Serve privacy page
+app.get('/privacy', (req, res) => {
+  res.sendFile(path.join(__dirname, 'privacy.html'));
 });
 
-// WebSocket connection handling
+// WebSocket connection handler
 wss.on('connection', (ws) => {
-  connectionCount++;
-  const clientId = `client-${connectionCount}`;
-  console.log(`🟢 New connection: ${clientId}`);
+  const clientId = generateId();
+  console.log(`Client connected: ${clientId}`);
   
-  let currentRoom = null;
+  clients.set(ws, {
+    id: clientId,
+    roomId: null,
+    username: `Guest_${clientId.substring(0, 5)}`
+  });
   
-  // Send welcome message
-  ws.send(JSON.stringify({ 
-    type: 'welcome', 
-    message: 'Connected to Video Sync Server',
-    clientId 
-  }));
-
   ws.on('message', (message) => {
     try {
       const data = JSON.parse(message);
-      console.log(`📥 Received from ${clientId}:`, data);
-
-      // Handle ping request
-      if (data.type === 'ping') {
-        ws.send(JSON.stringify({
-          type: 'pong',
-          timestamp: Date.now()
-        }));
-        return;
-      }
-
-      // Handle room joining
-      if (data.type === 'joinRoom') {
-        const roomId = data.roomId;
-        
-        // Leave previous room if any
-        if (currentRoom) {
-          const prevRoom = rooms.get(currentRoom);
-          if (prevRoom) {
-            prevRoom.members.delete(ws);
-            console.log(`👋 ${clientId} left room ${currentRoom}`);
-            
-            // Broadcast member update to room
-            broadcastToRoom(currentRoom, {
-              type: 'memberUpdate',
-              memberCount: prevRoom.members.size
-            }, ws);
-          }
-        }
-        
-        // Join new room
-        currentRoom = roomId;
-        if (!rooms.has(roomId)) {
-          rooms.set(roomId, { 
-            members: new Set(),
-            currentTime: 0,
-            paused: true
-          });
-          console.log(`🏠 Created new room: ${roomId}`);
-        }
-        
-        const room = rooms.get(roomId);
-        room.members.add(ws);
-        console.log(`🚪 ${clientId} joined room ${roomId}, total members: ${room.members.size}`);
-        
-        // Send current state to new member
-        ws.send(JSON.stringify({
-          type: 'roomState',
-          currentTime: room.currentTime,
-          paused: room.paused,
-          memberCount: room.members.size
-        }));
-        
-        // Broadcast to others
-        broadcastToRoom(roomId, {
-          type: 'memberUpdate',
-          memberCount: room.members.size
-        }, ws);
-      }
-
-      // Handle video events
-      if (data.type === 'videoEvent' && currentRoom) {
-        const room = rooms.get(currentRoom);
-        if (!room) return;
-        
-        // Update room state
-        if (data.currentTime !== undefined) {
-          room.currentTime = data.currentTime;
-        }
-        
-        if (data.eventName === 'play') {
-          room.paused = false;
-        } else if (data.eventName === 'pause') {
-          room.paused = true;
-        }
-        
-        console.log(`📺 Video ${data.eventName} at ${data.currentTime?.toFixed(2) || 0} in room ${currentRoom}`);
-        
-        // Broadcast to others
-        broadcastToRoom(currentRoom, {
-          type: 'videoCommand',
-          eventName: data.eventName,
-          currentTime: data.currentTime,
-          sender: clientId
-        }, ws);
-      }
-      
-      // Handle sync request
-      if (data.type === 'requestSync' && currentRoom) {
-        const room = rooms.get(currentRoom);
-        if (!room) return;
-        
-        ws.send(JSON.stringify({
-          type: 'syncState',
-          currentTime: room.currentTime,
-          paused: room.paused
-        }));
-      }
-      
+      handleMessage(ws, data);
     } catch (err) {
-      console.error(`❌ Error processing message from ${clientId}:`, err);
+      console.error('Error parsing message:', err);
     }
   });
   
   ws.on('close', () => {
-    console.log(`🔴 Connection closed: ${clientId}`);
-    connectionCount--;
-    
-    // Remove from room
-    if (currentRoom) {
-      const room = rooms.get(currentRoom);
-      if (room) {
-        room.members.delete(ws);
-        console.log(`👋 ${clientId} left room ${currentRoom}, remaining: ${room.members.size}`);
-        
-        // Delete empty rooms
-        if (room.members.size === 0) {
-          rooms.delete(currentRoom);
-          console.log(`🧹 Deleted empty room ${currentRoom}`);
-        } else {
-          // Notify remaining members
-          broadcastToRoom(currentRoom, {
-            type: 'memberUpdate',
-            memberCount: room.members.size
-          });
-        }
-      }
+    const client = clients.get(ws);
+    console.log(`Client disconnected: ${client?.id || 'unknown'}`);
+    if (client && client.roomId) {
+      leaveRoom(ws, client.roomId);
     }
+    clients.delete(ws);
   });
+  
+  ws.send(JSON.stringify({
+    type: 'connected',
+    clientId: clientId
+  }));
 });
 
-// Helper function to broadcast to room
-function broadcastToRoom(roomId, data, exclude = null) {
-  const room = rooms.get(roomId);
-  if (!room) return;
+// Handle incoming messages
+function handleMessage(ws, message) {
+  const client = clients.get(ws);
+  if (!client) return;
   
-  const message = JSON.stringify(data);
-  room.members.forEach(client => {
-    if (client !== exclude && client.readyState === WebSocket.OPEN) {
-      client.send(message);
+  console.log(`Received message type: ${message.type} from client: ${client.id}`);
+  
+  switch (message.type) {
+    case 'joinRoom':
+      joinRoom(ws, message.roomId, message.username);
+      break;
+    case 'leaveRoom':
+      leaveRoom(ws, client.roomId);
+      break;
+    case 'updateUsername':
+      updateUsername(ws, message.username);
+      break;
+    case 'videoEvent':
+      // Update playback state for the room
+      if (client.roomId) {
+        const currentState = roomPlaybackState.get(client.roomId) || {};
+        roomPlaybackState.set(client.roomId, {
+          currentTime: message.currentTime,
+          isPlaying: message.eventName === 'play',
+          lastUpdated: Date.now()
+        });
+      }
+      broadcastToRoom(client.roomId, {
+        type: 'videoCommand',
+        eventName: message.eventName,
+        currentTime: message.currentTime,
+        senderId: client.id
+      }, ws);
+      break;
+    case 'chatMessage':
+      if (!message.timestamp) {
+        message.timestamp = Date.now();
+      }
+      broadcastToRoom(client.roomId, {
+        type: 'chatMessage',
+        username: client.username,
+        text: message.text,
+        timestamp: message.timestamp
+      });
+      break;
+    case 'requestSync':
+      // Instead of asking another client, send stored state if available
+      if (client.roomId && roomPlaybackState.has(client.roomId)) {
+        const state = roomPlaybackState.get(client.roomId);
+        ws.send(JSON.stringify({
+          type: 'syncState',
+          roomId: client.roomId,
+          currentTime: state.currentTime,
+          isPlaying: state.isPlaying
+        }));
+      } else {
+        // Fallback: ask another client if available
+        for (const otherWs of rooms.get(client.roomId) || []) {
+          if (otherWs !== ws) {
+            otherWs.send(JSON.stringify({
+              type: 'syncRequest',
+              requesterId: client.id
+            }));
+            break;
+          }
+        }
+      }
+      break;
+    case 'ping':
+      ws.send(JSON.stringify({ type: 'pong' }));
+      break;
+  }
+}
+
+// Join a room
+function joinRoom(ws, roomId, username) {
+  const client = clients.get(ws);
+  if (!client) return;
+  
+  if (username) {
+    client.username = username;
+  }
+  
+  if (client.roomId && client.roomId !== roomId) {
+    leaveRoom(ws, client.roomId);
+  }
+  
+  if (!rooms.has(roomId)) {
+    rooms.set(roomId, new Set());
+  }
+  
+  const room = rooms.get(roomId);
+  room.add(ws);
+  client.roomId = roomId;
+  
+  console.log(`Client ${client.id} joined room ${roomId} | Members: ${room.size}`);
+  
+  ws.send(JSON.stringify({
+    type: 'roomJoined',
+    roomId: roomId
+  }));
+  
+  broadcastToRoom(roomId, {
+    type: 'chatMessage',
+    isSystem: true,
+    text: `${client.username} joined the room`
+  });
+  
+  broadcastToRoom(roomId, {
+    type: 'memberUpdate',
+    memberCount: room.size
+  });
+}
+
+// Leave a room
+function leaveRoom(ws, roomId) {
+  if (!roomId || !rooms.has(roomId)) return;
+  
+  const client = clients.get(ws);
+  if (!client) return;
+  
+  const room = rooms.get(roomId);
+  room.delete(ws);
+  
+  console.log(`Client ${client.id} left room ${roomId} | Members: ${room.size}`);
+  
+  if (room.size === 0) {
+    rooms.delete(roomId);
+    roomPlaybackState.delete(roomId);
+    console.log(`Room ${roomId} deleted`);
+  } else {
+    broadcastToRoom(roomId, {
+      type: 'chatMessage',
+      isSystem: true,
+      text: `${client.username} left the room`
+    });
+    broadcastToRoom(roomId, {
+      type: 'memberUpdate',
+      memberCount: room.size
+    });
+  }
+  
+  client.roomId = null;
+}
+
+// Update username
+function updateUsername(ws, username) {
+  const client = clients.get(ws);
+  if (!client || !username) return;
+  
+  const oldUsername = client.username;
+  client.username = username;
+  
+  if (client.roomId && rooms.has(client.roomId)) {
+    broadcastToRoom(client.roomId, {
+      type: 'chatMessage',
+      isSystem: true,
+      text: `${oldUsername} is now known as ${username}`
+    });
+  }
+}
+
+// Broadcast a message to all clients in a room
+function broadcastToRoom(roomId, message, exclude = null) {
+  if (!roomId || !rooms.has(roomId)) return;
+  const room = rooms.get(roomId);
+  room.forEach((clientWs) => {
+    if (clientWs !== exclude && clientWs.readyState === WebSocket.OPEN) {
+      clientWs.send(JSON.stringify(message));
     }
   });
 }
 
-// Log room status periodically
-setInterval(() => {
-  console.log(`\n📊 Server Status: ${new Date().toLocaleTimeString()}`);
-  console.log(`Active rooms: ${rooms.size}`);
-  console.log(`Active connections: ${connectionCount}`);
-  
-  rooms.forEach((room, id) => {
-    console.log(`Room ${id}: ${room.members.size} members, time: ${room.currentTime.toFixed(2)}s`);
-  });
-  console.log('------------------------');
-}, 30000);
+// Generate unique ID
+function generateId() {
+  return Math.random().toString(36).substring(2, 10) + Date.now().toString(36);
+}
 
-// Start server
+// Start the server
 const PORT = process.env.PORT || 3000;
 server.listen(PORT, () => {
-  console.log(`🚀 Server running on port ${PORT}`);
+  console.log(`Video Sync server running on port ${PORT}`);
 });

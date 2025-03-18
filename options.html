@@ -3,76 +3,325 @@
 <head>
   <title>Video Sync Options</title>
   <style>
+    :root {
+      --primary-color: #0071e3;
+      --accent-color: #34d399;
+      --danger-color: #ff3b30;
+      --warning-color: #ffcc00;
+      --text-color: #ffffff;
+      --text-secondary: rgba(255, 255, 255, 0.7);
+      --bg-dark: #1c1c1e;
+      --bg-darker: #121214;
+      --bg-card: rgba(44, 44, 46, 0.8);
+      --border-color: rgba(255, 255, 255, 0.15);
+      --shadow-color: rgba(0, 0, 0, 0.5);
+    }
+    
     body {
-      font-family: Arial, sans-serif;
+      font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Helvetica Neue", Arial, sans-serif;
+      background: linear-gradient(135deg, var(--bg-dark) 0%, var(--bg-darker) 100%);
+      color: var(--text-color);
       margin: 0;
-      padding: 20px;
-      max-width: 800px;
+      padding: 30px 20px;
+      line-height: 1.5;
+      min-height: 100vh;
+    }
+    
+    .container {
+      max-width: 700px;
       margin: 0 auto;
+      display: flex;
+      flex-direction: column;
+      min-height: calc(100vh - 60px);
     }
+    
+    header {
+      text-align: center;
+      margin-bottom: 40px;
+      padding-bottom: 20px;
+      border-bottom: 1px solid var(--border-color);
+    }
+    
     h1 {
-      color: #333;
+      font-size: 28px;
+      font-weight: 600;
+      background: linear-gradient(135deg, #34d399 0%, #06b6d4 100%);
+      -webkit-background-clip: text;
+      background-clip: text;
+      -webkit-text-fill-color: transparent;
+      margin-bottom: 10px;
     }
-    .option-group {
+    
+    .card {
+      background: linear-gradient(145deg, rgba(44, 44, 46, 0.8) 0%, rgba(28, 28, 30, 0.8) 100%);
+      backdrop-filter: blur(10px);
+      -webkit-backdrop-filter: blur(10px);
+      border-radius: 16px;
+      border: 1px solid var(--border-color);
+      padding: 25px;
+      margin-bottom: 30px;
+      box-shadow: 0 8px 20px rgba(0, 0, 0, 0.25);
+    }
+    
+    h2 {
+      font-size: 20px;
+      font-weight: 600;
+      color: var(--accent-color);
+      margin-top: 0;
       margin-bottom: 20px;
-      padding: 15px;
-      border: 1px solid #ddd;
-      border-radius: 5px;
     }
+    
     label {
       display: block;
-      margin-bottom: 5px;
-      font-weight: bold;
+      font-size: 14px;
+      margin-bottom: 8px;
+      color: var(--text-secondary);
+      font-weight: 500;
     }
-    input {
+    
+    input, select {
       width: 100%;
-      padding: 8px;
-      margin-bottom: 10px;
+      padding: 12px 16px;
+      border-radius: 12px;
+      border: 1px solid var(--border-color);
+      background-color: rgba(60, 60, 67, 0.25);
+      color: var(--text-color);
+      font-family: inherit;
+      font-size: 15px;
       box-sizing: border-box;
+      margin-bottom: 16px;
+      transition: all 0.2s ease;
     }
+    
+    input:focus, select:focus {
+      border-color: var(--primary-color);
+      outline: none;
+      box-shadow: 0 0 0 2px rgba(0, 113, 227, 0.3);
+    }
+    
+    .button-group {
+      display: flex;
+      gap: 15px;
+      margin-top: 20px;
+    }
+    
     button {
-      background: #4CAF50;
+      padding: 12px 20px;
+      border-radius: 12px;
       border: none;
-      color: white;
-      padding: 10px 15px;
-      text-align: center;
+      font-weight: 500;
+      font-family: inherit;
+      font-size: 15px;
       cursor: pointer;
-      border-radius: 3px;
+      transition: all 0.3s ease;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
     }
+    
+    .btn-primary {
+      background: linear-gradient(135deg, #0071e3, #0099ff);
+      color: white;
+    }
+    
+    .btn-primary:hover {
+      background: linear-gradient(135deg, #0062c9, #0086e6);
+      transform: translateY(-1px);
+      box-shadow: 0 4px 12px rgba(0, 113, 227, 0.5);
+    }
+    
+    .btn-success {
+      background: linear-gradient(135deg, #34d399, #06b6d4);
+      color: white;
+    }
+    
+    .btn-success:hover {
+      background: linear-gradient(135deg, #10b981, #0891b2);
+      transform: translateY(-1px);
+      box-shadow: 0 4px 12px rgba(52, 211, 153, 0.5);
+    }
+    
     .status {
-      margin-top: 10px;
-      padding: 10px;
-      border-radius: 3px;
+      padding: 16px;
+      border-radius: 12px;
+      margin-top: 20px;
+      display: none;
+      backdrop-filter: blur(10px);
+      -webkit-backdrop-filter: blur(10px);
+      animation: fadeIn 0.3s ease;
     }
-    .success {
-      background-color: #d4edda;
-      color: #155724;
+    
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(-10px); }
+      to { opacity: 1; transform: translateY(0); }
     }
-    .error {
-      background-color: #f8d7da;
-      color: #721c24;
+    
+    .status.success {
+      background: linear-gradient(145deg, rgba(52, 199, 89, 0.2) 0%, rgba(48, 209, 88, 0.1) 100%);
+      border: 1px solid rgba(52, 199, 89, 0.3);
+      color: #34c759;
+    }
+    
+    .status.error {
+      background: linear-gradient(145deg, rgba(255, 59, 48, 0.2) 0%, rgba(255, 69, 58, 0.1) 100%);
+      border: 1px solid rgba(255, 59, 48, 0.3);
+      color: #ff3b30;
+    }
+    
+    .status.pending {
+      background: linear-gradient(145deg, rgba(255, 204, 0, 0.2) 0%, rgba(255, 184, 0, 0.1) 100%);
+      border: 1px solid rgba(255, 204, 0, 0.3);
+      color: #ffcc00;
+    }
+    
+    .version {
+      color: var(--text-secondary);
+      font-size: 14px;
+    }
+    
+    footer {
+      text-align: center;
+      color: var(--text-secondary);
+      font-size: 13px;
+      margin-top: auto;
+      padding-top: 40px;
+      border-top: 1px solid var(--border-color);
+    }
+    
+    .section {
+      margin-bottom: 40px;
+    }
+    
+    .toggle-group {
+      display: flex;
+      align-items: center;
+      margin-bottom: 16px;
+    }
+    
+    .toggle-label {
+      flex: 1;
+    }
+    
+    .toggle {
+      position: relative;
+      display: inline-block;
+      width: 50px;
+      height: 28px;
+    }
+    
+    .toggle input {
+      opacity: 0;
+      width: 0;
+      height: 0;
+    }
+    
+    .slider {
+      position: absolute;
+      cursor: pointer;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background-color: rgba(60, 60, 67, 0.3);
+      transition: .4s;
+      border-radius: 34px;
+    }
+    
+    .slider:before {
+      position: absolute;
+      content: "";
+      height: 20px;
+      width: 20px;
+      left: 4px;
+      bottom: 4px;
+      background-color: white;
+      transition: .4s;
+      border-radius: 50%;
+    }
+    
+    input:checked + .slider {
+      background-color: var(--accent-color);
+    }
+    
+    input:focus + .slider {
+      box-shadow: 0 0 1px var(--accent-color);
+    }
+    
+    input:checked + .slider:before {
+      transform: translateX(22px);
     }
   </style>
 </head>
 <body>
-  <h1>Video Sync Options</h1>
-  
-  <div class="option-group">
-    <h2>Server Settings</h2>
-    <label for="serverUrl">Sync Server URL:</label>
-    <input type="text" id="serverUrl" placeholder="ws://localhost:3000">
-    <p>Default: ws://localhost:3000</p>
+  <div class="container">
+    <header>
+      <h1>Video Sync Options</h1>
+      <p>Configure your video synchronization settings</p>
+    </header>
     
-    <button id="testConnection">Test Connection</button>
-    <button id="saveSettings">Save Settings</button>
+    <div class="card">
+      <h2>Server Settings</h2>
+      
+      <label for="serverUrl">Sync Server URL:</label>
+      <input type="text" id="serverUrl" placeholder="ws://movsy-production.up.railway.app/">
+      
+      <p style="color: var(--text-secondary); font-size: 14px; margin-top: -5px;">Default: ws://movsy-production.up.railway.app/</p>
+      
+      <div class="button-group">
+        <button id="testConnection" class="btn-primary">Test Connection</button>
+        <button id="saveSettings" class="btn-success">Save Settings</button>
+      </div>
+      
+      <div id="connectionStatus" class="status"></div>
+    </div>
     
-    <div id="connectionStatus" class="status" style="display: none;"></div>
-  </div>
-  
-  <div class="option-group">
-    <h2>About</h2>
-    <p>Video Sync allows you to watch videos in sync with friends.</p>
-    <p>Version: 1.0</p>
+    <div class="card">
+      <h2>Display Settings</h2>
+      
+      <div class="section">
+        <div class="toggle-group">
+          <label class="toggle-label">Auto-collapse UI when inactive</label>
+          <label class="toggle">
+            <input type="checkbox" id="autoCollapse" checked>
+            <span class="slider"></span>
+          </label>
+        </div>
+        
+        <div class="toggle-group">
+          <label class="toggle-label">Show notifications</label>
+          <label class="toggle">
+            <input type="checkbox" id="showNotifications" checked>
+            <span class="slider"></span>
+          </label>
+        </div>
+        
+        <div class="toggle-group">
+          <label class="toggle-label">Auto-join rooms from URL</label>
+          <label class="toggle">
+            <input type="checkbox" id="autoJoinRooms" checked>
+            <span class="slider"></span>
+          </label>
+        </div>
+      </div>
+      
+      <label for="chatHistoryLimit">Chat History Limit:</label>
+      <select id="chatHistoryLimit">
+        <option value="20">20 messages</option>
+        <option value="50" selected>50 messages</option>
+        <option value="100">100 messages</option>
+        <option value="0">No limit</option>
+      </select>
+      
+      <button id="saveDisplaySettings" class="btn-primary">Save Display Settings</button>
+    </div>
+    
+    <div class="card">
+      <h2>About</h2>
+      <p style="color: var(--text-secondary);">Video Sync allows you to watch videos in sync with friends.</p>
+      <p class="version">Version: 1.0</p>
+    </div>
+    
+    <footer>
+      <p>Made with ❤️ by Navneet</p>
+    </footer>
   </div>
   
   <script src="options.js"></script>

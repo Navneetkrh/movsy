@@ -1,1 +1,23 @@
-node_modules
+# Node modules
+node_modules/
+
+# Environment variables
+.env
+
+# Logs
+logs
+*.log
+npm-debug.log*
+
+# Runtime data
+pids
+*.pid
+*.seed
+
+# Dependency directories
+.npm
+.eslintcache
+
+# Misc
+.DS_Store
+Thumbs.db

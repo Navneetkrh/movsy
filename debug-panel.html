@@ -3,51 +3,139 @@
 <head>
   <title>Video Sync Debug Panel</title>
   <style>
+    :root {
+      --primary-color: #0071e3;
+      --accent-color: #34d399;
+      --danger-color: #ff3b30;
+      --warning-color: #ffcc00;
+      --text-color: #ffffff;
+      --text-secondary: rgba(255, 255, 255, 0.7);
+      --bg-dark: #1c1c1e;
+      --bg-darker: #121214;
+      --bg-card: rgba(44, 44, 46, 0.8);
+      --border-color: rgba(255, 255, 255, 0.15);
+    }
+    
     body {
-      font-family: Arial, sans-serif;
-      margin: 20px;
-      max-width: 800px;
-      margin: 0 auto;
+      font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Helvetica Neue", Arial, sans-serif;
+      background: linear-gradient(135deg, var(--bg-dark) 0%, var(--bg-darker) 100%);
+      color: var(--text-color);
+      margin: 0;
+      padding: 30px 20px;
+      line-height: 1.5;
     }
+    
+    h1 {
+      font-size: 28px;
+      font-weight: 600;
+      text-align: center;
+      margin-bottom: 30px;
+      background: linear-gradient(135deg, #34d399 0%, #06b6d4 100%);
+      -webkit-background-clip: text;
+      background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+    
     .panel {
-      border: 1px solid #ddd;
-      border-radius: 5px;
-      padding: 15px;
-      margin-bottom: 20px;
+      max-width: 800px;
+      margin: 0 auto 25px;
+      border-radius: 16px;
+      border: 1px solid var(--border-color);
+      background: linear-gradient(145deg, rgba(44, 44, 46, 0.8) 0%, rgba(28, 28, 30, 0.8) 100%);
+      padding: 20px;
+      box-shadow: 0 8px 20px rgba(0, 0, 0, 0.25);
     }
+    
+    h2 {
+      font-size: 18px;
+      font-weight: 600;
+      margin-top: 0;
+      margin-bottom: 15px;
+      color: var(--accent-color);
+    }
+    
     .status {
-      padding: 10px;
-      margin: 10px 0;
-      border-radius: 5px;
-      font-weight: bold;
+      padding: 14px;
+      margin: 15px 0;
+      border-radius: 12px;
+      font-weight: 500;
+      font-size: 15px;
+      backdrop-filter: blur(10px);
+      -webkit-backdrop-filter: blur(10px);
     }
-    .connected { background-color: #d4edda; color: #155724; }
-    .disconnected { background-color: #f8d7da; color: #721c24; }
+    
+    .connected { 
+      background: linear-gradient(145deg, rgba(52, 199, 89, 0.2) 0%, rgba(48, 209, 88, 0.1) 100%);
+      border: 1px solid rgba(52, 199, 89, 0.3);
+      color: #34c759;
+    }
+    
+    .disconnected { 
+      background: linear-gradient(145deg, rgba(255, 59, 48, 0.2) 0%, rgba(255, 69, 58, 0.1) 100%);
+      border: 1px solid rgba(255, 59, 48, 0.3);
+      color: #ff3b30;
+    }
+    
     button {
-      background: #4CAF50;
+      background: linear-gradient(135deg, #0071e3, #0099ff);
       color: white;
       border: none;
-      padding: 8px 15px;
-      border-radius: 4px;
+      padding: 10px 18px;
+      border-radius: 10px;
       cursor: pointer;
-      margin-right: 5px;
-      margin-bottom: 5px;
+      margin-right: 8px;
+      margin-bottom: 8px;
+      font-weight: 500;
+      font-family: inherit;
+      font-size: 14px;
+      transition: all 0.3s ease;
+      box-shadow: 0 2px 8px rgba(0, 113, 227, 0.4);
     }
-    button:hover { background: #45a049; }
+    
+    button:hover { 
+      background: linear-gradient(135deg, #0062c9, #0086e6);
+      transform: translateY(-1px);
+      box-shadow: 0 4px 12px rgba(0, 113, 227, 0.5);
+    }
+    
     input {
-      padding: 8px;
-      margin-right: 5px;
-      border-radius: 4px;
-      border: 1px solid #ddd;
+      padding: 10px 16px;
+      margin-right: 8px;
+      border-radius: 10px;
+      border: 1px solid var(--border-color);
+      background-color: rgba(60, 60, 67, 0.25);
+      color: var(--text-color);
+      font-family: inherit;
+      font-size: 14px;
+      transition: all 0.2s ease;
     }
+    
+    input:focus {
+      outline: none;
+      border-color: var(--primary-color);
+      box-shadow: 0 0 0 2px rgba(0, 113, 227, 0.3);
+    }
+    
     #log {
       height: 300px;
       overflow-y: scroll;
-      background: #f5f5f5;
-      padding: 10px;
-      font-family: monospace;
-      margin-top: 10px;
-      border: 1px solid #ddd;
+      background: linear-gradient(145deg, rgba(30, 30, 32, 0.8) 0%, rgba(20, 20, 22, 0.8) 100%);
+      padding: 15px;
+      font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
+      margin-top: 15px;
+      border-radius: 10px;
+      border: 1px solid var(--border-color);
+      font-size: 14px;
+      line-height: 1.6;
+    }
+    
+    #currentRoom {
+      background: linear-gradient(145deg, rgba(60, 60, 67, 0.3) 0%, rgba(40, 40, 45, 0.3) 100%);
+      padding: 12px;
+      border-radius: 10px;
+      margin-top: 15px;
+      font-weight: 500;
+      border: 1px solid var(--border-color);
     }
   </style>
 </head>

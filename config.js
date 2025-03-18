@@ -1,6 +1,6 @@
 // Simple configuration object
 const config = {
-  serverUrl: 'ws://localhost:3000',  // Make sure this matches your server address
+  serverUrl: 'ws://movsy-production.up.railway.app/',  // Make sure this matches your server address
   debug: true,
   version: '1.0.0'
 };

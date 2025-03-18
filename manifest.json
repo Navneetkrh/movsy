@@ -2,27 +2,49 @@
   "manifest_version": 3,
   "name": "Video Sync",
   "version": "1.0",
-  "description": "Synchronize video playback across browsers",
-  "permissions": [
-    "storage",
-    "activeTab"
-  ],
-  "host_permissions": [
-    "http://localhost:3000/*",
-    "ws://localhost:3000/*"
-  ],
+  "description": "Watch videos in sync with friends",
+  "icons": {
+    "16": "icons/icon16.png",
+    "48": "icons/icon48.png",
+    "128": "icons/icon128.png"
+  },
+  "action": {
+    "default_popup": "popup.html",
+    "default_icon": {
+      "16": "icons/icon16.png",
+      "48": "icons/icon48.png",
+      "128": "icons/icon128.png"
+    }
+  },
   "background": {
     "service_worker": "background.js"
   },
   "content_scripts": [
     {
       "matches": ["<all_urls>"],
-      "js": ["content.js"]
+      "js": ["content.js"],
+      "run_at": "document_idle"
     }
   ],
-  "action": {
-    "default_popup": "popup.html",
-    "default_title": "Video Sync"
+  "options_ui": {
+    "page": "options.html",
+    "open_in_tab": true
   },
-  "options_page": "options.html"
+  "permissions": [
+    "storage",
+    "tabs",
+    "activeTab",
+    "alarms"
+  ],
+  "host_permissions": [
+    "*://*/*"
+  ],
+  "content_security_policy": {
+    "extension_pages": "script-src 'self'; object-src 'self'"
+  },
+  "web_accessible_resources": [{
+    "resources": ["netflix-injector.js", "testing-controls.js"],
+    "matches": ["*://*.netflix.com/*"]
+  }],
+  "privacy_policy_url": "https://movsy-production.up.railway.app/privacy"
 }

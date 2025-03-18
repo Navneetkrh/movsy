@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Generate Video Sync Icons</title>
+  <style>
+    body { 
+      font-family: Arial, sans-serif;
+      max-width: 800px;
+      margin: 0 auto;
+      padding: 20px;
+      text-align: center;
+    }
+    
+    .canvases {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      gap: 20px;
+      margin: 20px 0;
+    }
+    
+    .canvas-container {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+    
+    canvas {
+      border: 1px solid #ccc;
+      margin-bottom: 10px;
+    }
+    
+    button {
+      padding: 10px 20px;
+      background: linear-gradient(135deg, #34d399, #06b6d4);
+      color: white;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+      font-size: 16px;
+    }
+    
+    a {
+      display: inline-block;
+      margin-top: 5px;
+      text-decoration: none;
+      color: #0071e3;
+    }
+  </style>
+</head>
+<body>
+  <h1>Video Sync Icon Generator</h1>
+  <p>Click to generate icons, then right-click each icon and save them as icon16.png, icon48.png, and icon128.png</p>
+  
+  <button id="generate">Generate Icons</button>
+  
+  <div class="canvases">
+    <div class="canvas-container">
+      <canvas id="canvas16" width="16" height="16"></canvas>
+      <div>icon16.png</div>
+      <a id="download16" download="icon16.png">Download</a>
+    </div>
+    
+    <div class="canvas-container">
+      <canvas id="canvas48" width="48" height="48"></canvas>
+      <div>icon48.png</div>
+      <a id="download48" download="icon48.png">Download</a>
+    </div>
+    
+    <div class="canvas-container">
+      <canvas id="canvas128" width="128" height="128"></canvas>
+      <div>icon128.png</div>
+      <a id="download128" download="icon128.png">Download</a>
+    </div>
+  </div>
+  
+  <script>
+    document.getElementById('generate').addEventListener('click', generateIcons);
+    
+    function generateIcons() {
+      generateIcon(16);
+      generateIcon(48);
+      generateIcon(128);
+    }
+    
+    function generateIcon(size) {
+      const canvas = document.getElementById(`canvas${size}`);
+      const ctx = canvas.getContext('2d');
+      const downloadLink = document.getElementById(`download${size}`);
+      
+      // Clear canvas
+      ctx.clearRect(0, 0, size, size);
+      
+      // Background gradient
+      const gradient = ctx.createLinearGradient(0, 0, size, size);
+      gradient.addColorStop(0, '#34d399');
+      gradient.addColorStop(1, '#06b6d4');
+      
+      // Fill background
+      ctx.fillStyle = gradient;
+      ctx.beginPath();
+      ctx.arc(size/2, size/2, size/2, 0, Math.PI * 2);
+      ctx.fill();
+      
+      // Draw play button
+      const triangleSize = size * 0.4;
+      ctx.fillStyle = 'white';
+      ctx.beginPath();
+      ctx.moveTo(size * 0.6, size/2);
+      ctx.lineTo(size * 0.4, size/2 - triangleSize/2);
+      ctx.lineTo(size * 0.4, size/2 + triangleSize/2);
+      ctx.closePath();
+      ctx.fill();
+      
+      // Update download link
+      downloadLink.href = canvas.toDataURL('image/png');
+    }
+    
+    // Generate icons on page load
+    window.onload = generateIcons;
+  </script>
+</body>
+</html>

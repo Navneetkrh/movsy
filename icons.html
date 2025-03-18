@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Video Sync Icon Generator</title>
+  <style>
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background-color: #f5f5f7;
+      margin: 0;
+      padding: 20px;
+      text-align: center;
+    }
+    
+    .container {
+      max-width: 600px;
+      margin: 0 auto;
+      background: white;
+      padding: 20px;
+      border-radius: 12px;
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+    }
+    
+    h1 {
+      margin-top: 0;
+      color: #333;
+    }
+    
+    .icons {
+      display: flex;
+      justify-content: center;
+      margin: 30px 0;
+      gap: 20px;
+    }
+    
+    .icon-wrapper {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+    
+    canvas {
+      border: 1px solid #ddd;
+      margin-bottom: 10px;
+    }
+    
+    button {
+      background-color: #0071e3;
+      color: white;
+      border: none;
+      padding: 10px 20px;
+      border-radius: 8px;
+      font-size: 16px;
+      cursor: pointer;
+      margin: 20px 0;
+      transition: background-color 0.2s;
+    }
+    
+    button:hover {
+      background-color: #0066cc;
+    }
+    
+    .instructions {
+      background-color: #f8f8f8;
+      padding: 15px 20px;
+      border-radius: 8px;
+      text-align: left;
+      margin-top: 30px;
+    }
+    
+    .instructions h2 {
+      margin-top: 0;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>Video Sync Icon Generator</h1>
+    <p>This tool creates the necessary icons for the extension.</p>
+    
+    <div class="icons">
+      <div class="icon-wrapper">
+        <canvas id="icon16" width="16" height="16"></canvas>
+        <span>16×16</span>
+      </div>
+      <div class="icon-wrapper">
+        <canvas id="icon48" width="48" height="48"></canvas>
+        <span>48×48</span>
+      </div>
+      <div class="icon-wrapper">
+        <canvas id="icon128" width="128" height="128"></canvas>
+        <span>128×128</span>
+      </div>
+    </div>
+    
+    <button id="downloadBtn">Download All Icons</button>
+    
+    <div class="instructions">
+      <h2>Installation Instructions</h2>
+      <ol>
+        <li>Click the "Download All Icons" button</li>
+        <li>Create a folder named "icons" in your extension directory</li>
+        <li>Move the downloaded icon files to the icons folder</li>
+        <li>The files should be named: icon16.png, icon48.png, and icon128.png</li>
+      </ol>
+    </div>
+  </div>
+  
+  <script>
+    // Draw icon function
+    function drawIcon(canvas) {
+      const ctx = canvas.getContext('2d');
+      const size = canvas.width;
+      
+      // Background
+      ctx.fillStyle = '#1e1e1e';
+      ctx.beginPath();
+      ctx.arc(size/2, size/2, size/2, 0, Math.PI * 2);
+      ctx.fill();
+      
+      // Play triangle
+      ctx.fillStyle = '#4CAF50';
+      ctx.beginPath();
+      const triangleSize = size * 0.4;
+      ctx.moveTo(size/2 + triangleSize/2, size/2);
+      ctx.lineTo(size/2 - triangleSize/3, size/2 - triangleSize/2);
+      ctx.lineTo(size/2 - triangleSize/3, size/2 + triangleSize/2);
+      ctx.fill();
+      
+      // Sync circle
+      ctx.strokeStyle = '#4CAF50';
+      ctx.lineWidth = Math.max(1, size * 0.06);
+      ctx.beginPath();
+      ctx.arc(size/2, size/2, size * 0.35, 0, Math.PI * 1.5);
+      ctx.stroke();
+      
+      // Arrow
+      const arrowSize = size * 0.12;
+      ctx.fillStyle = '#4CAF50';
+      ctx.beginPath();
+      ctx.moveTo(size/2, size/2 - size * 0.35);
+      ctx.lineTo(size/2 - arrowSize, size/2 - size * 0.35 + arrowSize);
+      ctx.lineTo(size/2 + arrowSize, size/2 - size * 0.35 + arrowSize);
+      ctx.fill();
+    }
+    
+    // Draw icons when page loads
+    window.onload = function() {
+      drawIcon(document.getElementById('icon16'));
+      drawIcon(document.getElementById('icon48'));
+      drawIcon(document.getElementById('icon128'));
+      
+      // Download button action
+      document.getElementById('downloadBtn').addEventListener('click', function() {
+        ['16', '48', '128'].forEach(size => {
+          const canvas = document.getElementById(`icon${size}`);
+          const link = document.createElement('a');
+          link.download = `icon${size}.png`;
+          link.href = canvas.toDataURL('image/png');
+          link.click();
+        });
+      });
+    };
+  </script>
+</body>
+</html>

@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Generate Video Sync Icons</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-100 p-8 font-sans">
+  <div class="max-w-lg mx-auto bg-white p-6 rounded-lg shadow-lg">
+    <h1 class="text-2xl font-bold text-center mb-6">Video Sync Icon Generator</h1>
+    <p class="mb-4 text-gray-600">Click the button below to generate icons for the extension.</p>
+    
+    <div class="flex justify-center space-x-4 mb-6">
+      <div>
+        <canvas id="canvas16" width="16" height="16" class="border border-gray-300"></canvas>
+        <p class="text-xs text-center mt-1">16×16</p>
+      </div>
+      <div>
+        <canvas id="canvas48" width="48" height="48" class="border border-gray-300"></canvas>
+        <p class="text-xs text-center mt-1">48×48</p>
+      </div>
+      <div>
+        <canvas id="canvas128" width="128" height="128" class="border border-gray-300"></canvas>
+        <p class="text-xs text-center mt-1">128×128</p>
+      </div>
+    </div>
+    
+    <div class="text-center">
+      <button id="downloadBtn" class="bg-emerald-600 text-white px-4 py-2 rounded-lg hover:bg-emerald-700 transition-colors">
+        Download All Icons
+      </button>
+    </div>
+    
+    <div class="mt-6 bg-gray-50 p-4 rounded-lg text-sm">
+      <h2 class="font-bold mb-2">Instructions:</h2>
+      <ol class="list-decimal list-inside space-y-1">
+        <li>Click the "Download All Icons" button</li>
+        <li>Create a folder named "icons" in your extension directory</li>
+        <li>Move the downloaded icons to the icons folder</li>
+      </ol>
+    </div>
+    
+    <p class="text-center text-gray-500 text-xs mt-6">
+      Made by Navneet
+    </p>
+  </div>
+  
+  <script>
+    function drawIcon(canvas) {
+      const ctx = canvas.getContext('2d');
+      const size = canvas.width;
+      
+      // Background
+      ctx.fillStyle = '#1e1e1e';
+      ctx.beginPath();
+      ctx.arc(size/2, size/2, size/2, 0, Math.PI * 2);
+      ctx.fill();
+      
+      // Play triangle
+      ctx.fillStyle = '#4CAF50';
+      ctx.beginPath();
+      const triangleSize = size * 0.4;
+      ctx.moveTo(size/2 + triangleSize/2, size/2);
+      ctx.lineTo(size/2 - triangleSize/3, size/2 - triangleSize/2);
+      ctx.lineTo(size/2 - triangleSize/3, size/2 + triangleSize/2);
+      ctx.fill();
+      
+      // Sync circle
+      ctx.strokeStyle = '#4CAF50';
+      ctx.lineWidth = Math.max(1, size * 0.06);
+      ctx.beginPath();
+      ctx.arc(size/2, size/2, size * 0.35, 0, Math.PI * 1.5);
+      ctx.stroke();
+      
+      // Arrow
+      const arrowSize = size * 0.12;
+      ctx.fillStyle = '#4CAF50';
+      ctx.beginPath();
+      ctx.moveTo(size/2, size/2 - size * 0.35);
+      ctx.lineTo(size/2 - arrowSize, size/2 - size * 0.35 + arrowSize);
+      ctx.lineTo(size/2 + arrowSize, size/2 - size * 0.35 + arrowSize);
+      ctx.fill();
+    }
+    
+    function drawAllIcons() {
+      drawIcon(document.getElementById('canvas16'));
+      drawIcon(document.getElementById('canvas48'));
+      drawIcon(document.getElementById('canvas128'));
+    }
+    
+    document.getElementById('downloadBtn').addEventListener('click', () => {
+      const sizes = [16, 48, 128];
+      
+      sizes.forEach(size => {
+        const canvas = document.getElementById(`canvas${size}`);
+        const link = document.createElement('a');
+        link.download = `icon${size}.png`;
+        link.href = canvas.toDataURL('image/png');
+        link.click();
+      });
+    });
+    
+    // Draw icons on page load
+    window.onload = drawAllIcons;
+  </script>
+</body>
+</html>
